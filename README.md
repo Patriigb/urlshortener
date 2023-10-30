@@ -2,7 +2,7 @@
 [![Build Status](../../actions/workflows/ci.yml/badge.svg)](../../actions/workflows/ci.yml)
 
 * [System requirements](#system-requirements)
-* [Overall structure](#overall-structure)
+* [Overall structure](#overall-structure) 
 * [Run](#run)
 * [Build and Run](#build-and-run)
 * [Functionalities](#functionalities)
