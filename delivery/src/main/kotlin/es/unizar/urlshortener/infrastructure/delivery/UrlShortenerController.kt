@@ -20,6 +20,9 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RestController
 import java.net.URI
+import org.springframework.web.bind.annotation.RequestParam
+import org.springframework.web.bind.annotation.RequestPart
+import org.springframework.web.multipart.MultipartFile
 
 /**
  * The specification of the controller.
@@ -121,4 +124,33 @@ class UrlShortenerControllerImpl(
             )
             ResponseEntity<ShortUrlDataOut>(response, h, HttpStatus.CREATED)
         }
+
+    @PostMapping("/api/bulk", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    fun bulkShortener(@RequestPart("file") file: MultipartFile, 
+        @RequestParam("sponsor", required = false) sponsor: String?,
+        request: HttpServletRequest): ResponseEntity<String> {
+        val csvContent = file.bytes.toString(Charsets.UTF_8)
+        val lines = csvContent.split("\n").map { it.trim() }
+        val resultCsv = StringBuilder("URI,URI_Recortada,Mensaje\n")
+
+        for (line in lines) {
+            val uri = line
+            val shortUrlDataIn = ShortUrlDataIn(uri, sponsor)
+            val response = createShortUrlUseCase.create(
+                url = shortUrlDataIn.url,
+                data = ShortUrlProperties(
+                    ip = request.remoteAddr,
+                    sponsor = shortUrlDataIn.sponsor
+                )
+            )
+
+            val originalUri = uri
+            val shortenedUri = linkTo<UrlShortenerControllerImpl> { redirectTo(response.hash, request) }.toUri()
+            val errorMessage = if (response.properties.safe) "OK" else "ERROR"
+
+            resultCsv.append("$originalUri,$shortenedUri,$errorMessage\n")
+        }
+
+        return ResponseEntity.ok(resultCsv.toString())
+    }
 }

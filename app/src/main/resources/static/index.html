@@ -18,12 +18,18 @@
             <h1>URL Shortener</h1>
             <p class="lead">A front-end example page for the project</p>
             <br>
-            <form action="" class="col-lg-12" id="shortener" role="form">
+            <form action="" class="col-lg-12" id="shortener" role="form" enctype="multipart/form-data">
                 <div class="input-group input-group-lg col-sm-offset-4 col-sm-4">
                     <input class="center-block form-control input-lg" name="url"
                            placeholder="Enter a URL" title="Enter a URL" type="text">
                     <span class="input-group-btn"><button
                             class="btn btn-lg btn-primary" type="submit">Short me!</button></span>
+                </div>
+                <div class="input-group input-group-lg col-sm-offset-4 col-sm-4">
+                    <input type="file" name="file" id="file" accept=".csv">
+                </div>
+                <div class="input-group input-group-lg col-sm-offset-4 col-sm-4">
+                    <button class="btn btn-lg btn-primary" type="submit" id="csvSubmit">Submit CSV</button>
                 </div>
             </form>
         </div>
