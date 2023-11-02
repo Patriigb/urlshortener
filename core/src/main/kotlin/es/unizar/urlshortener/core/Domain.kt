@@ -31,6 +31,12 @@ data class Redirection(
     val mode: Int = 307
 )
 
+data class InfoHeaders(
+    val hash: String,
+    val opSystem: String,
+    val browser: String
+)
+
 /**
  * A [ShortUrlProperties] is the bag of properties that a [ShortUrl] may have.
  */

@@ -53,6 +53,15 @@ fun ShortUrlEntity.toDomain() = ShortUrl(
 )
 
 /**
+ * Extension method to convert a [InfoHeadersEntity] into a domain [InfoHeaders].
+ */
+fun InfoHeadersEntity.toDomain() = InfoHeaders(
+    hash = hash,
+    opSystem = opSystem,
+    browser = browser
+)
+
+/**
  * Extension method to convert a domain [ShortUrl] into a [ShortUrlEntity].
  */
 fun ShortUrl.toEntity() = ShortUrlEntity(
@@ -65,4 +74,14 @@ fun ShortUrl.toEntity() = ShortUrlEntity(
     safe = properties.safe,
     ip = properties.ip,
     country = properties.country
+)
+
+/**
+ * Extension method to convert a domain [ShortUrl] into a [ShortUrlEntity].
+ */
+fun InfoHeaders.toEntity() = InfoHeadersEntity(
+    id = null,
+    hash = hash,
+    opSystem = opSystem,
+    browser = browser
 )

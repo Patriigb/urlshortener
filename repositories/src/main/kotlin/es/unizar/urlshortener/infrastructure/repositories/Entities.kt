@@ -42,3 +42,18 @@ class ShortUrlEntity(
     val ip: String?,
     val country: String?
 )
+
+/**
+ * The [InfoHeadersEntity] entity stores headers information.
+ */
+@Entity
+@Table(name = "infoheaders")
+@Suppress("LongParameterList")
+class InfoHeadersEntity(
+    @Id
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    val id: Long?,
+    val hash: String,
+    val opSystem: String,
+    val browser: String
+)

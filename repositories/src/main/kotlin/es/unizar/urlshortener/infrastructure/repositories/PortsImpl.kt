@@ -4,6 +4,8 @@ import es.unizar.urlshortener.core.Click
 import es.unizar.urlshortener.core.ClickRepositoryService
 import es.unizar.urlshortener.core.ShortUrl
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
+import es.unizar.urlshortener.core.InfoHeaders
+import es.unizar.urlshortener.core.InfoHeadersRepositoryService
 
 /**
  * Implementation of the port [ClickRepositoryService].
@@ -23,5 +25,17 @@ class ShortUrlRepositoryServiceImpl(
     override fun findByKey(id: String): ShortUrl? = shortUrlEntityRepository.findByHash(id)?.toDomain()
 
     override fun save(su: ShortUrl): ShortUrl = shortUrlEntityRepository.save(su.toEntity()).toDomain()
+}
+
+/**
+ * Implementation of the port [ShortUrlRepositoryService].
+ */
+class InfoHeadersRepositoryServiceImpl(
+    private val infoHeadersEntityRepository: InfoHeadersEntityRepository
+) : InfoHeadersRepositoryService {
+    override fun findByKey(id: String): Iterable<InfoHeaders>? = 
+    infoHeadersEntityRepository.findByHash(id)?.map { it.toDomain() }
+
+    override fun save(ih: InfoHeaders): InfoHeaders = infoHeadersEntityRepository.save(ih.toEntity()).toDomain()
 }
 

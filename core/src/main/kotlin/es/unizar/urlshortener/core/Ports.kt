@@ -16,6 +16,14 @@ interface ShortUrlRepositoryService {
 }
 
 /**
+ * [ShortUrlRepositoryService] is the port to the repository that provides management to [ShortUrl][ShortUrl].
+ */
+interface InfoHeadersRepositoryService {
+    fun findByKey(id: String): Iterable<InfoHeaders>?
+    fun save(ih: InfoHeaders): InfoHeaders
+}
+
+/**
  * [ValidatorService] is the port to the service that validates if an url can be shortened.
  *
  * **Note**: It is a design decision to create this port. It could be part of the core .

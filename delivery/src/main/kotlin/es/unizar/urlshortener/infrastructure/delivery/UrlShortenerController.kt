@@ -4,6 +4,7 @@ import es.unizar.urlshortener.core.ClickProperties
 import es.unizar.urlshortener.core.ShortUrlProperties
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
+import es.unizar.urlshortener.core.usecases.GetSumaryUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import jakarta.servlet.http.HttpServletRequest
@@ -12,6 +13,8 @@ import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.util.MultiValueMap
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
@@ -36,7 +39,13 @@ interface UrlShortenerController {
      * **Note**: Delivery of use case [CreateShortUrlUseCase].
      */
     fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut>
+
+    fun getSumary(id: String): ResponseEntity<Sumary>
 }
+
+data class Sumary(
+    val info: MultiValueMap<String, Pair<String, String>> =  LinkedMultiValueMap()
+)
 
 /**
  * Data required to create a short url.
@@ -65,12 +74,20 @@ class UrlShortenerControllerImpl(
     val redirectUseCase: RedirectUseCase,
     val logClickUseCase: LogClickUseCase,
     val createShortUrlUseCase: CreateShortUrlUseCase,
-    val createQrUseCase: CreateQrUseCase
+    val createQrUseCase: CreateQrUseCase,
+    val getSumaryUseCase: GetSumaryUseCase
 ) : UrlShortenerController {
+
+    @GetMapping("/api/link/{id}")
+    override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> =
+        getSumaryUseCase.getSumary(id).let{
+            val response = Sumary(info = it)
+            ResponseEntity<Sumary>(response, HttpStatus.CREATED)
+        }
 
     @GetMapping("/{id:(?!api|index).*}")
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> =
-        redirectUseCase.redirectTo(id).let {
+        redirectUseCase.redirectTo(id, request.getHeader("User-Agent")).let {
             logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr))
             val h = HttpHeaders()
             h.location = URI.create(it.target)
@@ -88,17 +105,19 @@ class UrlShortenerControllerImpl(
         ).let {
             val h = HttpHeaders()
             val url = linkTo<UrlShortenerControllerImpl> { redirectTo(it.hash, request) }.toUri()
+            val headersSumary = getSumary(it.hash)
+            println("hS: " + headersSumary)
             h.location = url
-            println("URL QR")
             // url del qr más /qr
-            val urlQr = url.toString() + "/qr"
+            //val urlQr = url.toString() + "/qr"
             val qrUrl = createQrUseCase.generateQRCode(url.toString(), "./qr.png")
             val response = ShortUrlDataOut(
                 url = url,
                 properties = mapOf(
-                    "safe" to it.properties.safe
+                    "safe" to it.properties.safe,
+                    "sumary" to headersSumary
                 ),
-                qr = urlQr
+                qr = qrUrl
             )
             ResponseEntity<ShortUrlDataOut>(response, h, HttpStatus.CREATED)
         }

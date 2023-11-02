@@ -1,5 +1,4 @@
 plugins {
-    
     id("urlshortener.kotlin-common-conventions")
 }
 
@@ -12,6 +11,10 @@ val springBootVersion by extra("3.1.3")
 val detektVersion by extra("1.23.1")
 
 dependencies {
+    implementation("org.springframework:spring-core:5.3.12")
+    implementation("org.springframework:spring-beans:5.3.12")
     //Para hacer la generacion del Qr
     implementation ("com.google.zxing:core:3.4.1")
+    // Para la cabecera User-Agent
+    implementation ("eu.bitwalker:UserAgentUtils:1.21")
 }
