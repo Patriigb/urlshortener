@@ -27,6 +27,7 @@ $(document).ready(
                         url: "/api/link",
                         data: $(this).serialize(),
                         success: function (msg, status, request) {
+                            $("#downloadCSV").hide();
                             $("#result").html(
                                 "<div class='alert alert-success lead'><a target='_blank' href='"
                                 + request.getResponseHeader('Location')
@@ -87,10 +88,28 @@ $(document).ready(
                         contentType: false,
                         processData: false,
                         success: function (msg, status, request) {
-                            $("#result").html(
-                                "<div class='alert alert-success lead'>"
-                                + msg
-                                + "</div>");
+                            $("#downloadCSV").hide();
+                            if (request.status === 200) {
+                                $("#result").html(
+                                    "<div class='alert alert-warning lead'>File is empty</div>");
+                                return;
+                            }
+                            var isCSV = request.getResponseHeader('Content-Type').includes("text/csv");
+                            if (isCSV) {
+                                // Crear un enlace para descargar el archivo CSV
+                                var blob = new Blob([msg], { type: "text/csv" });
+                                var csvURL = URL.createObjectURL(blob);
+                                var a = document.createElement('a');
+                                a.href = csvURL;
+                                a.download = "result.csv";
+                                a.textContent = "Download CSV";
+                                a.target = "_blank";
+
+                                // Agregar el enlace al documento
+                                $("#downloadCSV").empty().append(a).show();
+                            } else {
+                                $("#result").html("La respuesta no es un archivo CSV");
+                            }
                         },
                         error: function () {
                             $("#result").html(

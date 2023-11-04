@@ -44,6 +44,11 @@ interface UrlShortenerController {
     fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut>
 
     fun getSumary(id: String): ResponseEntity<Sumary>
+
+    /**
+     * Creates a CSV file with the short urls from a CSV file with the original urls.
+     */
+    fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String>
 }
 
 data class Sumary(
@@ -65,6 +70,23 @@ data class ShortUrlDataOut(
     val url: URI? = null,
     val properties: Map<String, Any> = emptyMap(),
     val qr: String? = null
+)
+
+/**
+ * Data required to create a short url from a csv file.
+ */
+data class CsvDataIn(
+    val file: MultipartFile,
+    val sponsor: String? = null
+)
+
+/**
+ * Data returned after the creation of a short url from a csv file.
+ */
+data class ShortInfo(
+    val originalUri: String,
+    val shortenedUri: URI,
+    val errorMessage: String
 )
 
 /**
@@ -126,31 +148,47 @@ class UrlShortenerControllerImpl(
         }
 
     @PostMapping("/api/bulk", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    fun bulkShortener(@RequestPart("file") file: MultipartFile, 
-        @RequestParam("sponsor", required = false) sponsor: String?,
-        request: HttpServletRequest): ResponseEntity<String> {
-        val csvContent = file.bytes.toString(Charsets.UTF_8)
+    override fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String> {
+        val csvContent = data.file.bytes.toString(Charsets.UTF_8)
+        if (csvContent.isEmpty()) {
+            return ResponseEntity(HttpStatus.OK)
+        }
+        val h = HttpHeaders()
+        h.contentType = MediaType.parseMediaType("text/csv")
         val lines = csvContent.split("\n").map { it.trim() }
         val resultCsv = StringBuilder("URI,URI_Recortada,Mensaje\n")
-
-        for (line in lines) {
-            val uri = line
-            val shortUrlDataIn = ShortUrlDataIn(uri, sponsor)
-            val response = createShortUrlUseCase.create(
-                url = shortUrlDataIn.url,
-                data = ShortUrlProperties(
-                    ip = request.remoteAddr,
-                    sponsor = shortUrlDataIn.sponsor
-                )
-            )
-
-            val originalUri = uri
-            val shortenedUri = linkTo<UrlShortenerControllerImpl> { redirectTo(response.hash, request) }.toUri()
-            val errorMessage = if (response.properties.safe) "OK" else "ERROR"
-
+        var firstUri = true
+        for (uri in lines) {
+            val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, data, request)
+            if (firstUri) {
+                h.location = shortenedUri
+                firstUri = false
+            }
             resultCsv.append("$originalUri,$shortenedUri,$errorMessage\n")
         }
-
-        return ResponseEntity.ok(resultCsv.toString())
+        return ResponseEntity(resultCsv.toString(), h, HttpStatus.CREATED)
     }
+
+    /**
+     * Creates a short url from a [uri].
+     * @return a [ShortInfo] with the original uri, the shortened uri and an error message if any.
+     */
+    private fun shortUrl( uri: String, data: CsvDataIn, request: HttpServletRequest): ShortInfo{
+        val shortUrlDataIn = ShortUrlDataIn(uri, data.sponsor)
+        val response = createShortUrlUseCase.create(
+            url = shortUrlDataIn.url,
+            data = ShortUrlProperties(
+                ip = request.remoteAddr,
+                sponsor = shortUrlDataIn.sponsor
+            )
+        )
+
+        val originalUri = uri
+        val shortenedUri = linkTo<UrlShortenerControllerImpl> { redirectTo(response.hash, request) }.toUri()
+        val errorMessage = if (response.properties.safe) "" else "ERROR"
+
+        return ShortInfo(originalUri, shortenedUri, errorMessage)
+    }
+
+
 }
