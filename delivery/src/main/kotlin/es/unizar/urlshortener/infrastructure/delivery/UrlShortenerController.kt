@@ -118,7 +118,7 @@ class UrlShortenerControllerImpl(
                 url = url,
                 properties = mapOf(
                     "safe" to it.properties.safe,
-                    "sumary" to headersSumary
+                    "sumary" to headersSumary.body.info
                 ),
                 qr = qrUrl
             )

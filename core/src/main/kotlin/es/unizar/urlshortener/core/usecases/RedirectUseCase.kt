@@ -35,7 +35,6 @@ class RedirectUseCaseImpl(
         val osName = operatingSystem.name
         
         println("Info añadida: " + browserName + " " + osName)
-        infoHeadersRepository.save(InfoHeaders(key, "hola", "a"))
         infoHeadersRepository.save(InfoHeaders(key, osName, browserName))
         return shortUrlRepository.findByKey(key)?.redirection?: throw RedirectionNotFound(key)
     } 
