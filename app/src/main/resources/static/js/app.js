@@ -1,9 +1,10 @@
 $(document).ready(
     function () {
+        var qrDir = null
         $("#shortener").submit(
 
             // // Obtén el valor de la casilla de verificación generateQR
-            // var generateQR = $("#generateQR").is(":checked");
+           // val generateQR = $("#generateQR").is(":checked")
 
             // // Crea un objeto de datos para la solicitud que incluye generateQR
             // //Esto es lo que mandamos cuando se escribe la url
@@ -21,12 +22,34 @@ $(document).ready(
                 var fileInput = document.getElementById('file');
                 var hayCsv = fileInput && fileInput.files.length > 0;
 
+                /**
+                 * Comprobar si está marcado el check de generar QR
+                 */
+
+                // Obtén el valor de la casilla de verificación generateQR
+                var generateQR = $("#qr").is(":checked")
+
+                // Crea un objeto de datos para la solicitud que incluye generateQR
+                //Esto es lo que mandamos cuando se escribe la url
+                // Obtén la cadena de consulta serializada
+                var serializedData = $(this).serialize();
+
+                // Agrega el nuevo dato a la cadena de consulta
+                serializedData += "&generateQr=" + generateQR;
+                console.log(serializedData)
+
                 if (!hayCsv) {
                     $.ajax({
                         type: "POST",
                         url: "/api/link",
-                        data: $(this).serialize(),
+                        data: serializedData,
                         success: function (msg, status, request) {
+                            qrDir = msg.qr
+                            if (generateQR) {
+                                $("#showQr").show();
+                            } else {
+                                $("#showQr").hide();
+                            }
                             $("#downloadCSV").hide();
                             $("#result").html(
                                 "<div class='alert alert-success lead'><a target='_blank' href='"
@@ -119,4 +142,28 @@ $(document).ready(
 
                 }
             });
+
+        $("#showQr").click(
+            function (event) {
+                event.preventDefault();
+                $.ajax({
+                    type: "GET",
+                    url: qrDir,
+                    responseType: 'arraybuffer',  // Especifica que la respuesta es un array de bytes
+                        success: function (msg, status, request) {
+                            // Convierte los bytes a una URL Blob
+                        console.log("msg", msg);
+                        
+                        // Redirigir a la url del QR
+                        window.location.href = qrDir;
+                        
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error en la solicitud:", status, error);
+                    }                    
+                }
+                )
+            }
+
+        );
     });

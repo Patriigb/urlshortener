@@ -10,13 +10,15 @@ import java.io.File
 import javax.imageio.ImageIO
 import java.awt.Color
 import java.awt.image.BufferedImage
+import java.io.ByteArrayOutputStream
 
 const val DEFAULT_MAX = 250
 const val DEFAULT_MIN = 0
 
 class CreateQrUseCase {
-    fun generateQRCode(content: String, filePath: String) : String {
+    fun generateQRCode(content: String) : ByteArray {
         // definir max y min
+        println("Use Case:"+ content)
         val qrCodeWriter = QRCodeWriter()
         val bitMatrix: BitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, DEFAULT_MAX, DEFAULT_MAX)
 
@@ -26,9 +28,10 @@ class CreateQrUseCase {
                 bufferedImage.setRGB(x, y, if (bitMatrix[x, y]) Color.BLACK.rgb else Color.WHITE.rgb)
             }
         }
+        println("QR generado")
 
-        val file = File(filePath)
-        ImageIO.write(bufferedImage, "png", file)
-        return filePath
+        val byteArrayOutputStream = ByteArrayOutputStream()
+        ImageIO.write(bufferedImage, "png", byteArrayOutputStream)
+        return byteArrayOutputStream.toByteArray()
     }
 }

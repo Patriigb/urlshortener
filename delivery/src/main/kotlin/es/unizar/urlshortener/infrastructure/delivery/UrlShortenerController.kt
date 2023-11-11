@@ -23,6 +23,8 @@ import java.net.URI
 import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.multipart.MultipartFile
+import es.unizar.urlshortener.core.ShortUrlRepositoryService
+
 
 /**
  * The specification of the controller.
@@ -49,6 +51,8 @@ interface UrlShortenerController {
      * Creates a CSV file with the short urls from a CSV file with the original urls.
      */
     fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String>
+
+    fun getQr(id: String, request: HttpServletRequest): ResponseEntity<ByteArray>
 }
 
 data class Sumary(
@@ -60,7 +64,8 @@ data class Sumary(
  */
 data class ShortUrlDataIn(
     val url: String,
-    val sponsor: String? = null
+    val sponsor: String? = null,
+    val generateQr: Boolean
 )
 
 /**
@@ -100,7 +105,8 @@ class UrlShortenerControllerImpl(
     val logClickUseCase: LogClickUseCase,
     val createShortUrlUseCase: CreateShortUrlUseCase,
     val createQrUseCase: CreateQrUseCase,
-    val getSumaryUseCase: GetSumaryUseCase
+    val getSumaryUseCase: GetSumaryUseCase,
+    private val shortUrlRepository: ShortUrlRepositoryService
 ) : UrlShortenerController {
 
     @GetMapping("/api/link/{id}")
@@ -119,6 +125,53 @@ class UrlShortenerControllerImpl(
             ResponseEntity<Unit>(h, HttpStatus.valueOf(it.mode))
         }
 
+    @GetMapping("/{id}/qr")
+    override fun getQr(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<ByteArray> {
+        // Verificar si el id existe en la base de datos
+        println("id: " + id)
+
+        val shortUrl = shortUrlRepository.findByKey(id)
+        if (shortUrl != null) {
+            
+            // Obtener la URL completa
+            val requestURL = request.requestURL.toString().substringBeforeLast("/qr")
+            println("URL completa: $requestURL")
+
+            val qrImage = createQrUseCase.generateQRCode(requestURL)
+            
+            // Devolver imagen con tipo de contenido correcto
+            return ResponseEntity.ok().header("Content-Type", "image/png").body(qrImage)
+        } else {
+            // Devolver 404 si el id no existe
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+        }
+    }
+
+    // @PostMapping("/{id}/validate")
+    // fun validate(@PathVariable id: String): ResponseEntity<Any> {
+    //     // Lógica de validación
+    //     val isValid = validarId(id)
+
+    //     if (isValid) {
+    //         return ResponseEntity.ok().build()
+    //     } else {
+    //         // Devolver 400 y Retry-After
+    //         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+    //             .header("Retry-After", "60")  // Tiempo en segundos
+    //             .build()
+    //     }
+    // }
+
+    // private fun validarId(id: String): Boolean {
+    //     // Lógica de validación del id (simulado)
+    //     return id.length > 5
+    // }
+
+    // private fun obtenerImagenQr(id: String): ByteArray {
+    //     // Lógica para obtener la imagen QR (simulado)
+    //     return "ImagenQR_$id".toByteArray()
+    // }
+
     @PostMapping("/api/link", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     override fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut> =
         createShortUrlUseCase.create(
@@ -134,16 +187,26 @@ class UrlShortenerControllerImpl(
             println("hS: " + headersSumary)
             h.location = url
             // url del qr más /qr
-            //val urlQr = url.toString() + "/qr"
-            val qrUrl = createQrUseCase.generateQRCode(url.toString(), "./qr.png")
-            val response = ShortUrlDataOut(
-                url = url,
-                properties = mapOf(
-                    "safe" to it.properties.safe,
-                    "sumary" to headersSumary.body.info
-                ),
-                qr = qrUrl
-            )
+            val urlQr = url.toString() + "/qr"
+            var response = ShortUrlDataOut()
+            if (data.generateQr) {
+                response = ShortUrlDataOut(
+                    url = url,
+                    properties = mapOf(
+                        "safe" to it.properties.safe,
+                        "sumary" to headersSumary.body.info
+                    ),
+                    qr = urlQr
+                )
+            } else{
+                response = ShortUrlDataOut(
+                    url = url,
+                    properties = mapOf(
+                        "safe" to it.properties.safe,
+                        "sumary" to headersSumary.body.info
+                    )
+                )
+            }
             ResponseEntity<ShortUrlDataOut>(response, h, HttpStatus.CREATED)
         }
 
@@ -174,7 +237,7 @@ class UrlShortenerControllerImpl(
      * @return a [ShortInfo] with the original uri, the shortened uri and an error message if any.
      */
     private fun shortUrl( uri: String, data: CsvDataIn, request: HttpServletRequest): ShortInfo{
-        val shortUrlDataIn = ShortUrlDataIn(uri, data.sponsor)
+        val shortUrlDataIn = ShortUrlDataIn(uri, data.sponsor, false)
         val response = createShortUrlUseCase.create(
             url = shortUrlDataIn.url,
             data = ShortUrlProperties(
