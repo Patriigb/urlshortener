@@ -15,8 +15,12 @@ import java.io.ByteArrayOutputStream
 const val DEFAULT_MAX = 250
 const val DEFAULT_MIN = 0
 
-class CreateQrUseCase {
-    fun generateQRCode(content: String) : ByteArray {
+interface CreateQrUseCase {
+    fun generateQRCode(content: String) : ByteArray
+}
+
+class CreateQrUseCaseImpl : CreateQrUseCase {
+    override fun generateQRCode(content: String) : ByteArray {
         // definir max y min
         println("Use Case:"+ content)
         val qrCodeWriter = QRCodeWriter()

@@ -16,7 +16,7 @@ import eu.bitwalker.useragentutils.OperatingSystem
  * **Note**: This is an example of functionality.
  */
 interface RedirectUseCase {
-    fun redirectTo(key: String, userAgent: String): Redirection
+    fun redirectTo(key: String): Redirection
 }
 
 /**
@@ -24,18 +24,8 @@ interface RedirectUseCase {
  */
 class RedirectUseCaseImpl(
     private val shortUrlRepository: ShortUrlRepositoryService,
-    private val infoHeadersRepository: InfoHeadersRepositoryService
 ) : RedirectUseCase {
-    override fun redirectTo(key: String, userAgent: String) : Redirection {
-        val userAgentParse = UserAgent.parseUserAgentString(userAgent)
-        val browser = userAgentParse.browser
-        val operatingSystem = userAgentParse.operatingSystem
-
-        val browserName = browser.name
-        val osName = operatingSystem.name
-        
-        println("Info añadida: " + browserName + " " + osName)
-        infoHeadersRepository.save(InfoHeaders(key, osName, browserName))
+    override fun redirectTo(key: String) : Redirection {
         return shortUrlRepository.findByKey(key)?.redirection?: throw RedirectionNotFound(key)
     } 
 }

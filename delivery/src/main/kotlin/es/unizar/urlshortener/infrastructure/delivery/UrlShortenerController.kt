@@ -4,7 +4,7 @@ import es.unizar.urlshortener.core.ClickProperties
 import es.unizar.urlshortener.core.ShortUrlProperties
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
-import es.unizar.urlshortener.core.usecases.GetSumaryUseCase
+import es.unizar.urlshortener.core.usecases.InfoHeadersUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import jakarta.servlet.http.HttpServletRequest
@@ -105,20 +105,21 @@ class UrlShortenerControllerImpl(
     val logClickUseCase: LogClickUseCase,
     val createShortUrlUseCase: CreateShortUrlUseCase,
     val createQrUseCase: CreateQrUseCase,
-    val getSumaryUseCase: GetSumaryUseCase,
-    private val shortUrlRepository: ShortUrlRepositoryService
+    val infoHeadersUseCase: InfoHeadersUseCase,
+    val shortUrlRepository: ShortUrlRepositoryService
 ) : UrlShortenerController {
 
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> =
-        getSumaryUseCase.getSumary(id).let{
+        infoHeadersUseCase.getSumary(id).let{
             val response = Sumary(info = it)
             ResponseEntity<Sumary>(response, HttpStatus.CREATED)
         }
 
     @GetMapping("/{id:(?!api|index).*}")
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> =
-        redirectUseCase.redirectTo(id, request.getHeader("User-Agent")).let {
+        redirectUseCase.redirectTo(id).let {
+            infoHeadersUseCase.logHeader(id, request.getHeader("User-Agent"))
             logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr))
             val h = HttpHeaders()
             h.location = URI.create(it.target)
@@ -187,23 +188,22 @@ class UrlShortenerControllerImpl(
             println("hS: " + headersSumary)
             h.location = url
             // url del qr más /qr
-            val urlQr = url.toString() + "/qr"
-            var response = ShortUrlDataOut()
-            if (data.generateQr) {
-                response = ShortUrlDataOut(
+            val response = if (data.generateQr) {
+                val urlQr = url.toString() + "/qr"
+                ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
                         "safe" to it.properties.safe,
-                        "sumary" to headersSumary.body.info
+                        "sumary" to headersSumary.body!!.info 
                     ),
                     qr = urlQr
                 )
-            } else{
-                response = ShortUrlDataOut(
+            } else {
+                ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
                         "safe" to it.properties.safe,
-                        "sumary" to headersSumary.body.info
+                        "sumary" to headersSumary.body!!.info 
                     )
                 )
             }

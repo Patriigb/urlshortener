@@ -3,9 +3,12 @@
 package es.unizar.urlshortener.infrastructure.delivery
 
 import es.unizar.urlshortener.core.*
+import es.unizar.urlshortener.core.usecases.CreateQrUseCase
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
+import es.unizar.urlshortener.core.usecases.InfoHeadersUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
+import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.never
@@ -14,6 +17,8 @@ import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.http.MediaType
+import org.springframework.util.LinkedMultiValueMap
+import org.springframework.util.MultiValueMap
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
@@ -42,20 +47,39 @@ class UrlShortenerControllerTest {
     @MockBean
     private lateinit var createShortUrlUseCase: CreateShortUrlUseCase
 
+    @MockBean
+    private lateinit var createQrUseCase: CreateQrUseCase
+
+    @MockBean
+    private lateinit var infoHeadersUseCase: InfoHeadersUseCase
+
+    @MockBean
+    private lateinit var shortUrlRepositoryService: ShortUrlRepositoryService
+
+    // private var userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" +
+    //                         "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 OPR/102.0.0.0"
+
     @Test
     fun `redirectTo returns a redirect when the key exists`() {
-        given(redirectUseCase.redirectTo("key", "")).willReturn(Redirection("http://example.com/"))
+        given(redirectUseCase.redirectTo("key")).willReturn(Redirection("http://example.com/"))
 
         mockMvc.perform(get("/{id}", "key"))
             .andExpect(status().isTemporaryRedirect)
             .andExpect(redirectedUrl("http://example.com/"))
+
+        // val result: MultiValueMap<String, Pair<String, String>> = getSumaryUseCase.getSumary("f684a3c4")
+
+        // val expectedMap = LinkedMultiValueMap<String, Pair<String, String>>()
+        // expectedMap.add("1", Pair("CHROME_11", "WINDOWS_10"))
+
+        // assertEquals(expectedMap, result)
 
         verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"))
     }
 
     @Test
     fun `redirectTo returns a not found when the key does not exist`() {
-        given(redirectUseCase.redirectTo("key", ""))
+        given(redirectUseCase.redirectTo("key"))
             .willAnswer { throw RedirectionNotFound("key") }
 
         mockMvc.perform(get("/{id}", "key"))

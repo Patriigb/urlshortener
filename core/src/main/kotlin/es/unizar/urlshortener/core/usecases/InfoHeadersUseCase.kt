@@ -17,17 +17,18 @@ import org.springframework.util.MultiValueMap
  *
  * **Note**: This is an example of functionality.
  */
-interface GetSumaryUseCase {
+interface InfoHeadersUseCase {
     fun getSumary(key: String): MultiValueMap<String, Pair<String, String>>
+    fun logHeader(key: String, userAgent: String)
 }
 
 
 /**
  * Implementation of [GetSumaryUseCase].
  */
-class GetSumaryUseCaseImpl(
+class InfoHeadersUseCaseImpl(
     private val infoHeadersRepository: InfoHeadersRepositoryService
-) : GetSumaryUseCase {
+) : InfoHeadersUseCase {
     override fun getSumary(key: String) : MultiValueMap<String, Pair<String, String>> {
         //Iterable<InfoHeaders>
         val info = infoHeadersRepository.findByKey(key) ?: throw RedirectionNotFound(key)
@@ -41,5 +42,17 @@ class GetSumaryUseCaseImpl(
         }
         return multiValueMap
     } 
+
+    override fun logHeader(key: String, userAgent: String) {
+        val userAgentParse = UserAgent.parseUserAgentString(userAgent)
+        val browser = userAgentParse.browser
+        val operatingSystem = userAgentParse.operatingSystem
+
+        val browserName = browser.name
+        val osName = operatingSystem.name
+        
+        println("Info añadida: " + browserName + " " + osName)
+        infoHeadersRepository.save(InfoHeaders(key, osName, browserName))
+    }
 }
 
