@@ -216,15 +216,27 @@ class UrlShortenerControllerImpl(
         val h = HttpHeaders()
         h.contentType = MediaType.parseMediaType("text/csv")
         val lines = csvContent.split("\n").map { it.trim() }
+        // Saltar la primera línea
+        lines.drop(1)
+
         val resultCsv = StringBuilder("URI,URI_Recortada,Mensaje\n")
         var firstUri = true
-        for (uri in lines) {
+        for (line in lines) {
+            val uri = line.split(",")[0]
+            val qr = line.split(",")[1]
+            
             val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, data, request)
             if (firstUri) {
                 h.location = shortenedUri
                 firstUri = false
             }
-            resultCsv.append("$originalUri,$shortenedUri,$errorMessage\n")
+
+            if (qr != null) {
+                val urlQr = shortenedUri.toString() + "/qr"
+                resultCsv.append("$originalUri,$shortenedUri,$urlQr,$errorMessage\n")
+            } else {
+                resultCsv.append("$originalUri,$shortenedUri,$errorMessage\n")
+            }
         }
         return ResponseEntity(resultCsv.toString(), h, HttpStatus.CREATED)
     }
@@ -234,20 +246,28 @@ class UrlShortenerControllerImpl(
      * @return a [ShortInfo] with the original uri, the shortened uri and an error message if any.
      */
     private fun shortUrl( uri: String, data: CsvDataIn, request: HttpServletRequest): ShortInfo{
-        val shortUrlDataIn = ShortUrlDataIn(uri, data.sponsor, false)
-        val response = createShortUrlUseCase.create(
-            url = shortUrlDataIn.url,
-            data = ShortUrlProperties(
-                ip = request.remoteAddr,
-                sponsor = shortUrlDataIn.sponsor
+        try {
+            val shortUrlDataIn = ShortUrlDataIn(uri, data.sponsor, false)
+            val response = createShortUrlUseCase.create(
+                url = shortUrlDataIn.url,
+                data = ShortUrlProperties(
+                    ip = request.remoteAddr,
+                    sponsor = shortUrlDataIn.sponsor
+                )
             )
-        )
 
-        val originalUri = uri
-        val shortenedUri = linkTo<UrlShortenerControllerImpl> { redirectTo(response.hash, request) }.toUri()
-        val errorMessage = if (response.properties.safe) "" else "ERROR"
+            val originalUri = uri
+            val shortenedUri = linkTo<UrlShortenerControllerImpl> { redirectTo(response.hash, request) }.toUri()
+            val errorMessage = if (response.properties.safe) "" else "ERROR"
 
-        return ShortInfo(originalUri, shortenedUri, errorMessage)
+            return ShortInfo(originalUri, shortenedUri, errorMessage)
+        } catch (e: Exception) {
+            val originalUri = uri
+            val shortenedUri = URI("")
+            val errorMessage = e.message ?: "ERROR"
+            return ShortInfo(originalUri, shortenedUri, errorMessage)
+        }
+
     }
 
 
