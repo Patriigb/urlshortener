@@ -67,13 +67,6 @@ class UrlShortenerControllerTest {
             .andExpect(status().isTemporaryRedirect)
             .andExpect(redirectedUrl("http://example.com/"))
 
-        // val result: MultiValueMap<String, Pair<String, String>> = getSumaryUseCase.getSumary("f684a3c4")
-
-        // val expectedMap = LinkedMultiValueMap<String, Pair<String, String>>()
-        // expectedMap.add("1", Pair("CHROME_11", "WINDOWS_10"))
-
-        // assertEquals(expectedMap, result)
-
         verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"))
     }
 

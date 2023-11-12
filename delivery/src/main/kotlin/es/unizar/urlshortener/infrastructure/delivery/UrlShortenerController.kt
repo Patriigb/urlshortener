@@ -65,7 +65,7 @@ data class Sumary(
 data class ShortUrlDataIn(
     val url: String,
     val sponsor: String? = null,
-    val generateQr: Boolean
+    val generateQr: Boolean?
 )
 
 /**
@@ -119,7 +119,9 @@ class UrlShortenerControllerImpl(
     @GetMapping("/{id:(?!api|index).*}")
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> =
         redirectUseCase.redirectTo(id).let {
-            infoHeadersUseCase.logHeader(id, request.getHeader("User-Agent"))
+            if (request.getHeader("User-Agent") != null) {
+                infoHeadersUseCase.logHeader(id, request.getHeader("User-Agent"))
+            }
             logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr))
             val h = HttpHeaders()
             h.location = URI.create(it.target)
@@ -129,15 +131,12 @@ class UrlShortenerControllerImpl(
     @GetMapping("/{id}/qr")
     override fun getQr(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<ByteArray> {
         // Verificar si el id existe en la base de datos
-        println("id: " + id)
 
         val shortUrl = shortUrlRepository.findByKey(id)
         if (shortUrl != null) {
             
             // Obtener la URL completa
             val requestURL = request.requestURL.toString().substringBeforeLast("/qr")
-            println("URL completa: $requestURL")
-
             val qrImage = createQrUseCase.generateQRCode(requestURL)
             
             // Devolver imagen con tipo de contenido correcto
@@ -185,16 +184,15 @@ class UrlShortenerControllerImpl(
             val h = HttpHeaders()
             val url = linkTo<UrlShortenerControllerImpl> { redirectTo(it.hash, request) }.toUri()
             val headersSumary = getSumary(it.hash)
-            println("hS: " + headersSumary)
             h.location = url
             // url del qr más /qr
-            val response = if (data.generateQr) {
+            val response = if (data.generateQr == true && headersSumary.body != null) {
                 val urlQr = url.toString() + "/qr"
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
                         "safe" to it.properties.safe,
-                        "sumary" to headersSumary.body!!.info 
+                        "sumary" to headersSumary.body.info
                     ),
                     qr = urlQr
                 )
@@ -202,8 +200,7 @@ class UrlShortenerControllerImpl(
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
-                        "safe" to it.properties.safe,
-                        "sumary" to headersSumary.body!!.info 
+                        "safe" to it.properties.safe
                     )
                 )
             }
