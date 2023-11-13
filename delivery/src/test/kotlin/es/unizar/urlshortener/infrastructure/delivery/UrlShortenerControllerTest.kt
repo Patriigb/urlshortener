@@ -1,4 +1,4 @@
-@file:Suppress("WildcardImport")
+@file:Suppress("WildcardImport", "unused")
 
 package es.unizar.urlshortener.infrastructure.delivery
 
@@ -6,6 +6,7 @@ import es.unizar.urlshortener.core.*
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.InfoHeadersUseCase
+import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -56,6 +57,9 @@ class UrlShortenerControllerTest {
     @MockBean
     private lateinit var shortUrlRepositoryService: ShortUrlRepositoryService
 
+    @MockBean
+    private lateinit var processCsvUseCase: ProcessCsvUseCase
+
     // private var userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" +
     //                         "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 OPR/102.0.0.0"
 
@@ -96,7 +100,7 @@ class UrlShortenerControllerTest {
             post("/api/link")
                 .param("url", "http://example.com/")
                 .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-        )
+            )
             .andDo(print())
             .andExpect(status().isCreated)
             .andExpect(redirectedUrl("http://localhost/f684a3c4"))

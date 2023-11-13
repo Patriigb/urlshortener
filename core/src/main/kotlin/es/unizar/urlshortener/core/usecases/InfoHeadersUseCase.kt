@@ -36,7 +36,9 @@ class InfoHeadersUseCaseImpl(
         val multiValueMap = LinkedMultiValueMap<String, Pair<String, String>>()
         for (infoHeader in info) {
             val id = infoHeader.hash
-            val value = Pair(infoHeader.browser, infoHeader.opSystem)
+            val browser = infoHeader.browser ?: "Unknown"
+            val opSystem = infoHeader.opSystem ?: "Unknown"
+            val value = Pair(browser, opSystem)
 
             multiValueMap.add(id, value)
         }

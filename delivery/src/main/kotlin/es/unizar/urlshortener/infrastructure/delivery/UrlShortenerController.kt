@@ -1,9 +1,12 @@
+@file:Suppress("LongParameterList", "TooGenericExceptionCaught")
+
 package es.unizar.urlshortener.infrastructure.delivery
 
 import es.unizar.urlshortener.core.ClickProperties
 import es.unizar.urlshortener.core.ShortUrlProperties
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
+import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
 import es.unizar.urlshortener.core.usecases.InfoHeadersUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
@@ -25,6 +28,8 @@ import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.multipart.MultipartFile
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
 
+const val OK = 200
+const val BAD_REQUEST = 400
 
 /**
  * The specification of the controller.
@@ -73,7 +78,7 @@ data class ShortUrlDataIn(
  */
 data class ShortUrlDataOut(
     val url: URI? = null,
-    val properties: Map<String, Any> = emptyMap(),
+    val properties: Map<String, Any?> = emptyMap(),
     val qr: String? = null
 )
 
@@ -106,7 +111,8 @@ class UrlShortenerControllerImpl(
     val createShortUrlUseCase: CreateShortUrlUseCase,
     val createQrUseCase: CreateQrUseCase,
     val infoHeadersUseCase: InfoHeadersUseCase,
-    val shortUrlRepository: ShortUrlRepositoryService
+    val shortUrlRepository: ShortUrlRepositoryService,
+    val processCsvUseCase: ProcessCsvUseCase
 ) : UrlShortenerController {
 
     @GetMapping("/api/link/{id}")
@@ -185,14 +191,18 @@ class UrlShortenerControllerImpl(
             val url = linkTo<UrlShortenerControllerImpl> { redirectTo(it.hash, request) }.toUri()
             val headersSumary = getSumary(it.hash)
             h.location = url
+
             // url del qr más /qr
-            val response = if (data.generateQr == true && headersSumary.body != null) {
+            val response = if (data.generateQr == true) {
                 val urlQr = url.toString() + "/qr"
+                // comprobar que headersSumary no es null
+                
+
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
                         "safe" to it.properties.safe,
-                        "sumary" to headersSumary.body.info
+                        "sumary" to headersSumary.body.info ?: Pair("","")
                     ),
                     qr = urlQr
                 )
@@ -200,7 +210,8 @@ class UrlShortenerControllerImpl(
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
-                        "safe" to it.properties.safe
+                        "safe" to it.properties.safe,
+                        "sumary" to headersSumary.body.info ?: Pair("","")
                     )
                 )
             }
@@ -210,20 +221,27 @@ class UrlShortenerControllerImpl(
     @PostMapping("/api/bulk", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     override fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String> {
         val csvContent = data.file.bytes.toString(Charsets.UTF_8)
-        if (csvContent.isEmpty()) {
-            return ResponseEntity(HttpStatus.OK)
-        }
         val h = HttpHeaders()
         h.contentType = MediaType.parseMediaType("text/csv")
-        val lines = csvContent.split("\n").map { it.trim() }
-        // Saltar la primera línea
-        lines.drop(1)
+        var checkQr : Boolean
+        var urlQr = ""
+        var lines : List<String>
+        
+        processCsvUseCase.checkCsvContent(csvContent).let {
+            if (it.result == BAD_REQUEST || it.result == OK) {
+                return ResponseEntity(HttpStatus.valueOf(it.result))
+            } else {
+                checkQr = it.result == 1
+                lines = it.content
+            }
+        }
 
         val resultCsv = StringBuilder("URI,URI_Recortada,Mensaje\n")
         var firstUri = true
-        for (line in lines) {
+        for (i in 1 until lines.size) {
+            var line = lines[i]
             val uri = line.split(",")[0]
-            val qr = line.split(",")[1]
+            val qr = if (checkQr && line.split(",").size > 1 && line.split(",")[1] != "") line.split(",")[1] else null
             
             val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, data, request)
             if (firstUri) {
@@ -231,8 +249,8 @@ class UrlShortenerControllerImpl(
                 firstUri = false
             }
 
-            if (qr != null) {
-                val urlQr = shortenedUri.toString() + "/qr"
+            if (checkQr) { 
+                if (qr != "") urlQr = shortenedUri.toString() + "/qr"
                 resultCsv.append("$originalUri,$shortenedUri,$urlQr,$errorMessage\n")
             } else {
                 resultCsv.append("$originalUri,$shortenedUri,$errorMessage\n")
