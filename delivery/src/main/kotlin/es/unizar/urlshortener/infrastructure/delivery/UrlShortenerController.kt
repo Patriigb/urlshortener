@@ -119,7 +119,7 @@ class UrlShortenerControllerImpl(
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> =
         infoHeadersUseCase.getSumary(id).let{
             val response = Sumary(info = it)
-            ResponseEntity<Sumary>(response, HttpStatus.CREATED)
+            ResponseEntity<Sumary>(response, HttpStatus.OK)
         }
 
     @GetMapping("/{id:(?!api|index).*}")

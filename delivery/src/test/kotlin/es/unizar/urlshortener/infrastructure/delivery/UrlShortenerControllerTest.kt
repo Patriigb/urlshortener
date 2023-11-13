@@ -13,6 +13,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.never
+import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
@@ -60,8 +61,40 @@ class UrlShortenerControllerTest {
     @MockBean
     private lateinit var processCsvUseCase: ProcessCsvUseCase
 
-    // private var userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" +
-    //                         "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 OPR/102.0.0.0"
+    private var userAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36" +
+                            "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 OPR/102.0.0.0"
+
+    @Test
+    fun `getSumary returns an empty headers sumary if url has not been accesed yet`() {
+        val expectedInfoMap = LinkedMultiValueMap<String, Pair<String, String>>()
+        
+        given(infoHeadersUseCase.getSumary("key")).willReturn(expectedInfoMap)
+        mockMvc.perform(get("/api/link/{id}", "key"))
+            .andExpect(status().isOk)
+
+        verify(infoHeadersUseCase, times(1)).getSumary("key")
+    }
+
+    @Test
+    fun `getSumary returns headers sumary if url has been accesed`() {
+        val expectedInfoMap = LinkedMultiValueMap<String, Pair<String, String>>()
+        expectedInfoMap.add("key", Pair("CHROME_11", "WINDOWS_10"))
+
+        given(redirectUseCase.redirectTo("key")).willReturn(Redirection("http://example.com/"))
+        given(infoHeadersUseCase.getSumary("key")).willReturn(expectedInfoMap)
+        
+        mockMvc.perform(get("/{id}", "key")
+            .header("User-Agent", userAgent))
+            .andExpect(status().isTemporaryRedirect)
+            .andExpect(redirectedUrl("http://example.com/"))
+
+        mockMvc.perform(get("/api/link/{id}", "key"))
+            .andExpect(status().isOk)
+
+        verify(infoHeadersUseCase, times(1)).getSumary("key")
+        verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"))
+        verify(infoHeadersUseCase).logHeader("key", userAgent)
+    }
 
     @Test
     fun `redirectTo returns a redirect when the key exists`() {
