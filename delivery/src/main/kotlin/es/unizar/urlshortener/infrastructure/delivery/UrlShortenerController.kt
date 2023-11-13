@@ -189,20 +189,16 @@ class UrlShortenerControllerImpl(
         ).let {
             val h = HttpHeaders()
             val url = linkTo<UrlShortenerControllerImpl> { redirectTo(it.hash, request) }.toUri()
-            val headersSumary = getSumary(it.hash)
             h.location = url
 
             // url del qr más /qr
             val response = if (data.generateQr == true) {
                 val urlQr = url.toString() + "/qr"
                 // comprobar que headersSumary no es null
-                
-
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
-                        "safe" to it.properties.safe,
-                        "sumary" to headersSumary.body.info ?: Pair("","")
+                        "safe" to it.properties.safe
                     ),
                     qr = urlQr
                 )
@@ -210,8 +206,8 @@ class UrlShortenerControllerImpl(
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
-                        "safe" to it.properties.safe,
-                        "sumary" to headersSumary.body.info ?: Pair("","")
+                        "safe" to it.properties.safe
+                        //"sumary" to headersSumary.body.info ?: Pair("","")
                     )
                 )
             }

@@ -1,6 +1,7 @@
 $(document).ready(
     function () {
         var qrDir = null
+        var dir = null
         $("#shortener").submit(
 
             // // Obtén el valor de la casilla de verificación generateQR
@@ -45,6 +46,7 @@ $(document).ready(
                         data: serializedData,
                         success: function (msg, status, request) {
                             qrDir = msg.qr
+                            dir = msg.url
                             if (generateQR) {
                                 $("#showQr").show();
                             } else {
@@ -58,40 +60,7 @@ $(document).ready(
                                 + request.getResponseHeader('Location')
                                 + "</a></div>");
                            // Acceder a la propiedad "sumary" dentro del objeto "properties"
-                        var summary = msg.properties.sumary;
-                        console.log("Sum .", summary);
-                        // Verificar si "sumary" está definido y no es nulo
-                        if (summary) {
-                            var keys = Object.keys(summary);
-                            if (keys.length > 0) {
-                                for (var key in summary) {
-                                    var summaryList = "Últimos 10 accesos a <strong>" + key + "</strong> realizados por:";
-                                    summaryList += "<table class='table table-striped table-bordered'>";
-                                    summaryList += "<thead><tr><th>Navegador</th><th>Sistema Operativo</th></tr></thead>";
-                                    summaryList += "<tbody>";
-
-                                    if (summary.hasOwnProperty(key)) {
-                                        // Iterar sobre los elementos dentro de "67f05a19" (o el nombre de la clave)
-                                        var innerList = summary[key];
-                                        for (var i = 0; i < innerList.length; i++) {
-                                            var item = innerList[i];
-                                            if(i < 10) summaryList += "<tr><td>" + item.first + "</td><td>" + item.second + "</td></tr>";
-                                        }
-                                    }
-                                }
-
-                                summaryList += "</tbody></table>";
-
-                                // Ahora puedes agregar summaryList al elemento HTML deseado
-                                document.getElementById("userAgent").innerHTML = summaryList;
-                            }
-                            else{
-                                $("#userAgent").html(
-                                    "<div>"
-                                    + "URL aún sin acceder"
-                                    + "</div>");
-                            }
-                        }
+                    
                         
                         },
                         error: function () {
@@ -156,6 +125,62 @@ $(document).ready(
                         
                         // Redirigir a la url del QR
                         window.location.href = qrDir;
+                        
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error en la solicitud:", status, error);
+                    }                    
+                }
+                )
+            }
+
+        );
+        $("#showHeaders").click(
+            function (event) {
+                event.preventDefault();
+                // Obtiene el último segmento de la URL (el identificador)
+                var idFinal = dir.substring(dir.lastIndexOf('/') + 1);
+                $.ajax({
+                    type: "GET",
+                    url: '/api/link/'+ idFinal,
+                        success: function (msg, status, request) {
+                            // Convierte los bytes a una URL Blob
+                        console.log("msg", msg);
+                        
+                        var summary = msg.info;
+                        console.log("Sum .", summary);
+                        // Verificar si "sumary" está definido y no es nulo
+                        if (summary) {
+                            var keys = Object.keys(summary);
+                            if (keys.length > 0) {
+                                for (var key in summary) {
+                                    var summaryList = "Últimos 10 accesos a <strong>" + key + "</strong> realizados por:";
+                                    summaryList += "<table class='table table-striped table-bordered'>";
+                                    summaryList += "<thead><tr><th>Navegador</th><th>Sistema Operativo</th></tr></thead>";
+                                    summaryList += "<tbody>";
+
+                                    if (summary.hasOwnProperty(key)) {
+                                        // Iterar sobre los elementos dentro de "67f05a19" (o el nombre de la clave)
+                                        var innerList = summary[key];
+                                        for (var i = 0; i < innerList.length; i++) {
+                                            var item = innerList[i];
+                                            if(i < 10) summaryList += "<tr><td>" + item.first + "</td><td>" + item.second + "</td></tr>";
+                                        }
+                                    }
+                                }
+
+                                summaryList += "</tbody></table>";
+
+                                // Ahora puedes agregar summaryList al elemento HTML deseado
+                                document.getElementById("userAgent").innerHTML = summaryList;
+                            }
+                            else{
+                                $("#userAgent").html(
+                                    "<div>"
+                                    + "URL aún sin acceder"
+                                    + "</div>");
+                            }
+                        }
                         
                     },
                     error: function (xhr, status, error) {

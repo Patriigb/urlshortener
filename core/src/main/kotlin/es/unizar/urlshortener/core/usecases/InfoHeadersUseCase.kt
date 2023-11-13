@@ -3,7 +3,6 @@ package es.unizar.urlshortener.core.usecases
 import es.unizar.urlshortener.core.Redirection
 import es.unizar.urlshortener.core.InfoHeaders
 import es.unizar.urlshortener.core.RedirectionNotFound
-import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import es.unizar.urlshortener.core.InfoHeadersRepositoryService
 import eu.bitwalker.useragentutils.UserAgent
 import eu.bitwalker.useragentutils.Browser
@@ -36,9 +35,7 @@ class InfoHeadersUseCaseImpl(
         val multiValueMap = LinkedMultiValueMap<String, Pair<String, String>>()
         for (infoHeader in info) {
             val id = infoHeader.hash
-            val browser = infoHeader.browser ?: "Unknown"
-            val opSystem = infoHeader.opSystem ?: "Unknown"
-            val value = Pair(browser, opSystem)
+            val value = Pair(infoHeader.browser, infoHeader.opSystem)
 
             multiValueMap.add(id, value)
         }
@@ -53,8 +50,6 @@ class InfoHeadersUseCaseImpl(
         val browserName = browser.name
         val osName = operatingSystem.name
         
-        println("Info añadida: " + browserName + " " + osName)
         infoHeadersRepository.save(InfoHeaders(key, osName, browserName))
     }
 }
-

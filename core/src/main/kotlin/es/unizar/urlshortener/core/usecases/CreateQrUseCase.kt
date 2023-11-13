@@ -22,7 +22,6 @@ interface CreateQrUseCase {
 class CreateQrUseCaseImpl : CreateQrUseCase {
     override fun generateQRCode(content: String) : ByteArray {
         // definir max y min
-        println("Use Case:"+ content)
         val qrCodeWriter = QRCodeWriter()
         val bitMatrix: BitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, DEFAULT_MAX, DEFAULT_MAX)
 
@@ -32,7 +31,6 @@ class CreateQrUseCaseImpl : CreateQrUseCase {
                 bufferedImage.setRGB(x, y, if (bitMatrix[x, y]) Color.BLACK.rgb else Color.WHITE.rgb)
             }
         }
-        println("QR generado")
 
         val byteArrayOutputStream = ByteArrayOutputStream()
         ImageIO.write(bufferedImage, "png", byteArrayOutputStream)
