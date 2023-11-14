@@ -229,9 +229,6 @@ $(document).ready(
                     // Agregar un atributo personalizado para almacenar el nombre de la métrica
                     button.attr("data-metric", metricName);
 
-                    // Agregar un salto de línea antes de cada botón
-                    //resultContainer.append("<br><br>");
-
                     // Agregar un botón al contenedor
                     buttonContainer.append(button);
                 } else {
@@ -243,6 +240,10 @@ $(document).ready(
             $(".metric-button").on("click", function () {
                 var metricName = $(this).data("metric");
 
+                var metricContainer = $("#metric-info");
+                metricContainer.empty();
+
+
                 // Llamar a la función e imprimir el nombre de la métrica
                 console.log(metricName);
                     $.ajax({
@@ -250,11 +251,26 @@ $(document).ready(
                      url: '/api/metrics/' + metricName,
                      success: function (metricData) {
                          console.log("Datos de la métrica " + metricName + ":", metricData);
-                         // Mostrar los datos en un alert
-                         // alert("Datos de la métrica " + metricName + ":\n" + JSON.stringify(metricData));
-                         // Dentro de la función success utilizando Bootstrap
-                         $("#myModal .modal-body").html("Datos de la métrica " + metricName + ": " + JSON.stringify(metricData));
-                         $("#myModal").modal('show');
+
+                         var metricName = metricData.name;
+                         var metricDescription = metricData.description;
+                         var metricValue = metricData.measurements[0].value;
+                         var metricUnit = metricData.baseUnit
+
+                         // Crear un mensaje bonito
+                         var message = `<strong>Nombre:</strong> ${metricName}<br>`
+                         message += `<strong>Descripción:</strong> ${metricDescription}<br>`
+                         if(metricUnit !== undefined){
+                             message += `<strong>Valor:</strong> ${metricValue} ${metricUnit}`
+                         } else{
+                             message += `<strong>Valor:</strong> ${metricValue} `
+
+                         }
+
+                         // Mostrar el mensaje en el HTML
+                         metricContainer.append(message)
+                         // document.getElementById('metric-info').innerHTML = message;
+
                      },
                      error: function (xhr, status, error) {
                          console.log("Error en la solicitud:", status, error);
