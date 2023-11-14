@@ -3,10 +3,8 @@
 package es.unizar.urlshortener.core.usecases
 
 import com.google.zxing.BarcodeFormat
-import com.google.zxing.MultiFormatWriter
 import com.google.zxing.common.BitMatrix
 import com.google.zxing.qrcode.QRCodeWriter
-import java.io.File
 import javax.imageio.ImageIO
 import java.awt.Color
 import java.awt.image.BufferedImage

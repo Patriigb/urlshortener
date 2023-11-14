@@ -191,4 +191,32 @@ $(document).ready(
             }
 
         );
+        $("#getMetrics").click(
+            function (event) {
+                event.preventDefault();
+                $.ajax({
+                    type: "GET",
+                    url: '/api/metrics',
+                    success: function (data) {
+                        console.log("Data:", data);
+
+                        var resultContainer = $("#resultMetrics");
+
+                        // Limpiar el contenido existente
+                        resultContainer.empty();
+
+                        // Crear elementos HTML para cada propiedad y agregarlos al contenedor
+                        resultContainer.append("<p>Metrica 1: " + data.names[0] + "</p>");
+                        resultContainer.append("<p>Metrica 2: " + data.names[1] + "</p>");
+                        resultContainer.append("<p>Metrica 3: " + data.names[2] + "</p>");
+                        resultContainer.append("<p>Metrica 4: " + data.names[3] + "</p>");
+
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error en la solicitud:", status, error);
+                    }
+                });
+            }
+
+        );
     });

@@ -10,6 +10,7 @@ import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
 import es.unizar.urlshortener.core.usecases.InfoHeadersUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
+import es.unizar.urlshortener.core.usecases.MetricsUseCase
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.hateoas.server.mvc.linkTo
 import org.springframework.http.HttpHeaders
@@ -58,6 +59,17 @@ interface UrlShortenerController {
     fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String>
 
     fun getQr(id: String, request: HttpServletRequest): ResponseEntity<ByteArray>
+
+    /**
+     * Gets the metrics of the system.
+     */
+    // fun getMetrics(): ResponseEntity<Sumary>
+
+    /*
+    * Gets a specific the metric
+    * */
+    fun getMetric(id: String): ResponseEntity<Sumary>
+    
 }
 
 data class Sumary(
@@ -112,7 +124,8 @@ class UrlShortenerControllerImpl(
     val createQrUseCase: CreateQrUseCase,
     val infoHeadersUseCase: InfoHeadersUseCase,
     val shortUrlRepository: ShortUrlRepositoryService,
-    val processCsvUseCase: ProcessCsvUseCase
+    val processCsvUseCase: ProcessCsvUseCase,
+    val metricsUseCase: MetricsUseCase
 ) : UrlShortenerController {
 
     @GetMapping("/api/link/{id}")
@@ -151,6 +164,17 @@ class UrlShortenerControllerImpl(
             // Devolver 404 si el id no existe
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
         }
+    }
+
+    /*@GetMapping("/api/metrics")
+    override fun getMetrics(): ResponseEntity<Summary> {
+
+    }*/
+
+    @GetMapping("/api/metrics/{id}")
+    override fun getMetric(@PathVariable("id") id: String): ResponseEntity<Sumary> {
+            metricsUseCase.getMetric(id)
+            return ResponseEntity.status(HttpStatus.OK).build()
     }
 
     // @PostMapping("/{id}/validate")
