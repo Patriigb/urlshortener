@@ -2,6 +2,9 @@
 
 package es.unizar.urlshortener.core.usecases
 
+/**
+ * Given a content returns a String that contains metrics.
+ */
 interface MetricsUseCase {
     fun generateMetrics() : String
     fun getMetric(content: String) : String

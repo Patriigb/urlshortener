@@ -40,13 +40,14 @@
                     <span class="input-group-btn"><button
                             class="btn btn-lg btn-primary" type="submit">Short me!</button></span>
                 </div>
+                <!-- CSV -->
                 <div class="input-group input-group-lg col-sm-offset-4 col-sm-4">
                     <input type="file" name="file" id="file" accept=".csv">
                 </div>
                 <div class="input-group input-group-lg col-sm-offset-4 col-sm-4">
                     <a class="stretched-link" id="downloadCSV" style="display: none;"></a>
                 </div>
-                <!-- Checkbox 1 -->
+                <!-- QR -->
                 <input type="checkbox" id="qr" name="qr">
                 <label for="qr">Generar Qr</label><br>
             </form>
@@ -55,10 +56,12 @@
                 <button class="btn btn-lg btn-primary" type="button" id="showQr" style="display: none;">Get qr</button>
             </form>
             <br>
+            <!-- HEADERS -->
             <form action="" class="col-lg-12" id="showHeadersForm" role="form">
                 <button class="btn btn-lg btn-primary" type="button" id="showHeaders">Ver info</button>
             </form>
             <br>
+            <!-- METRICS -->
             <form action="" class="col-lg-12" id="getMetricsForm" role="form">
                 <button class="btn btn-lg btn-primary" type="button" id="getMetrics">Ver metricas</button>
             </form>

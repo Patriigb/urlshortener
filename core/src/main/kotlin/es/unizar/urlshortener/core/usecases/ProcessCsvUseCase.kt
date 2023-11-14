@@ -14,15 +14,24 @@ import java.io.ByteArrayOutputStream
 const val BAD_REQUEST = 400
 const val OK = 200
 
+/**
+ * Data class that contains the result of the csv processing.
+ */
 data class CsvContent (
     val result: Int, 
     val content: List<String> = listOf<String>()
 )
 
+/**
+ * Given a csv content returns a [CsvContent] that contains a list of url lines.
+ */
 interface ProcessCsvUseCase {
     fun checkCsvContent(csvContent: String) : CsvContent
 }
 
+/**
+ * Implementation of [ProcessCsvUseCase].
+ */
 class ProcessCsvUseCaseImpl : ProcessCsvUseCase {
     override fun checkCsvContent(csvContent: String) : CsvContent {
         // Comprobaciones del csv
