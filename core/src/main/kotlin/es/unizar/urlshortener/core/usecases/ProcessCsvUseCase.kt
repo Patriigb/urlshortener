@@ -32,7 +32,7 @@ class ProcessCsvUseCaseImpl : ProcessCsvUseCase {
         } else {
 
             val lines = csvContent.split("\n").map { it.trim() }
-            result = CsvContent(OK, lines)
+            result = CsvContent(0, lines)
 
             if (lines.size < 1 || lines[0].split(",")[0] != "URI") {
                 return CsvContent(BAD_REQUEST)
@@ -40,7 +40,7 @@ class ProcessCsvUseCaseImpl : ProcessCsvUseCase {
 
             if (lines[0].split(",").size > 1 && lines[0].split(",")[1] == "QR") {
                 result = CsvContent(1, lines)
-            } 
+            }
         }
         return result
     }

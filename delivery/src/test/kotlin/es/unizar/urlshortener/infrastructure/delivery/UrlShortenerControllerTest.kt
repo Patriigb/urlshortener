@@ -3,13 +3,7 @@
 package es.unizar.urlshortener.infrastructure.delivery
 
 import es.unizar.urlshortener.core.*
-import es.unizar.urlshortener.core.usecases.CreateQrUseCase
-import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
-import es.unizar.urlshortener.core.usecases.InfoHeadersUseCase
-import es.unizar.urlshortener.core.usecases.MetricsUseCase
-import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
-import es.unizar.urlshortener.core.usecases.LogClickUseCase
-import es.unizar.urlshortener.core.usecases.RedirectUseCase
+import es.unizar.urlshortener.core.usecases.*
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
@@ -20,15 +14,21 @@ import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
+import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.mock.web.MockMultipartFile
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.web.servlet.MockMvc
+import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
+import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import java.net.URI
 
 @WebMvcTest
 @ContextConfiguration(
@@ -99,6 +99,50 @@ class UrlShortenerControllerTest {
         verify(infoHeadersUseCase, times(1)).getSumary("key")
         verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"))
         verify(infoHeadersUseCase).logHeader("key", userAgent)
+    }
+
+    @Test
+    fun `createCsv returns a CSV file with shortened URIs`() {
+        val csvDataIn = MockMultipartFile(
+            "file", "test.csv", "text/csv", "URI\nhttp://example.com".toByteArray()
+        )
+
+        given(processCsvUseCase.checkCsvContent("URI\nhttp://example.com"))
+            .willReturn(CsvContent(0, listOf("URI", "http://example.com")))
+        given(createShortUrlUseCase.create("http://example.com", ShortUrlProperties(ip = "127.0.0.1")))
+            .willReturn(ShortUrl("f684a3c4", Redirection("http://example.com")))
+
+        val response = mockMvc.perform(
+            MockMvcRequestBuilders.multipart("/api/bulk")
+                .file(csvDataIn)
+        )
+            .andDo(print())
+            .andExpect(status().isCreated)
+            .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "text/csv"))
+            .andExpect(header().string(HttpHeaders.LOCATION, "http://localhost/f684a3c4"))
+            .andReturn()
+
+        val expectedCsv = "URI,URI_Recortada,Mensaje\nhttp://example.com,http://localhost/f684a3c4,\n"
+        assertEquals(expectedCsv, response.response.contentAsString)
+    }
+
+    @Test
+    fun `createCsv returns a bad request if the CSV is not well formed`() {
+        val csvDataIn = MockMultipartFile(
+            "file", "test.csv", "text/csv", ",http://example.com".toByteArray()
+        )
+
+        given(processCsvUseCase.checkCsvContent(",http://example.com"))
+            .willReturn(CsvContent(400))
+
+        mockMvc.perform(
+            MockMvcRequestBuilders.multipart("/api/bulk")
+                .file(csvDataIn)
+        )
+            .andDo(print())
+            .andExpect(status().isBadRequest)
+
+        verify(createShortUrlUseCase, never()).create(any(), any())
     }
 
     @Test
