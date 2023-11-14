@@ -121,6 +121,69 @@ class UrlShortenerControllerTest {
     }
 
     @Test
+    fun `getQr returns Ok if key exists`() {
+
+        given(
+            createShortUrlUseCase.create(
+                url = "http://example.com/",
+                data = ShortUrlProperties(ip = "127.0.0.1")
+            )
+        ).willReturn(ShortUrl("f684a3c4", Redirection("http://example.com/")))
+
+        //first it needs to create the short url
+        mockMvc.perform(
+            post("/api/link")
+                .param("url", "http://example.com/")
+                .param("generateQr", true.toString())
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+            )
+            .andDo(print())
+            .andExpect(status().isCreated)
+            .andExpect(redirectedUrl("http://localhost/f684a3c4"))
+            .andExpect(jsonPath("$.url").value("http://localhost/f684a3c4"))
+            .andExpect(jsonPath("$.qr").value("http://localhost/f684a3c4/qr"))
+
+        verify(shortUrlRepositoryService).save(ShortUrl("f684a3c4", Redirection("http://example.com/")))
+        mockMvc.perform(get("/{id}/qr", "f684a3c4"))
+            .andDo(print())
+            .andExpect(status().isOk)
+
+        verify(createQrUseCase).generateQRCode("http://localhost/f684a3c4")
+    }
+
+    @Test
+    fun `getQr returns NOT_FOUND if key does not exist`() {
+
+        mockMvc.perform(get("/{id}/qr", "key"))
+            .andDo(print())
+            .andExpect(status().isNotFound)
+
+        verify(createQrUseCase, never()).generateQRCode("http://localhost/key")
+    }
+
+    @Test
+    fun `creates includes a qr field in the returned json`() {
+        given(
+            createShortUrlUseCase.create(
+                url = "http://example.com/",
+                data = ShortUrlProperties(ip = "127.0.0.1")
+            )
+        ).willReturn(ShortUrl("f684a3c4", Redirection("http://example.com/")))
+
+        mockMvc.perform(
+            post("/api/link")
+                .param("url", "http://example.com/")
+                .param("generateQr", true.toString())
+                .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
+            )
+            .andDo(print())
+            .andExpect(status().isCreated)
+            .andExpect(redirectedUrl("http://localhost/f684a3c4"))
+            .andExpect(jsonPath("$.url").value("http://localhost/f684a3c4"))
+            .andExpect(jsonPath("$.qr").value("http://localhost/f684a3c4/qr"))
+    }
+
+    @Test
     fun `creates returns a basic redirect if it can compute a hash`() {
         given(
             createShortUrlUseCase.create(
