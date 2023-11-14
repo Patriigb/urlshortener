@@ -14,6 +14,7 @@ import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.never
+import org.mockito.kotlin.any
 import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
@@ -127,27 +128,10 @@ class UrlShortenerControllerTest {
     @Test
     fun `getQr returns Ok if key exists`() {
 
-        given(
-            createShortUrlUseCase.create(
-                url = "http://example.com/",
-                data = ShortUrlProperties(ip = "127.0.0.1")
-            )
-        ).willReturn(ShortUrl("f684a3c4", Redirection("http://example.com/")))
-
-        //first it needs to create the short url
-        mockMvc.perform(
-            post("/api/link")
-                .param("url", "http://example.com/")
-                .param("generateQr", true.toString())
-                .contentType(MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-            )
-            .andDo(print())
-            .andExpect(status().isCreated)
-            .andExpect(redirectedUrl("http://localhost/f684a3c4"))
-            .andExpect(jsonPath("$.url").value("http://localhost/f684a3c4"))
-            .andExpect(jsonPath("$.qr").value("http://localhost/f684a3c4/qr"))
-
-        verify(shortUrlRepositoryService).save(ShortUrl("f684a3c4", Redirection("http://example.com/")))
+        given(shortUrlRepositoryService.findByKey("f684a3c4")).willReturn(ShortUrl(
+            "f684a3c4",Redirection("http://example.com/")
+        ))
+       
         mockMvc.perform(get("/{id}/qr", "f684a3c4"))
             .andDo(print())
             .andExpect(status().isOk)
