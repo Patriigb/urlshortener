@@ -6,6 +6,7 @@ import es.unizar.urlshortener.core.*
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.InfoHeadersUseCase
+import es.unizar.urlshortener.core.usecases.MetricsUseCase
 import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
@@ -57,6 +58,9 @@ class UrlShortenerControllerTest {
 
     @MockBean
     private lateinit var shortUrlRepositoryService: ShortUrlRepositoryService
+
+    @MockBean
+    private lateinit var metricsUseCase: MetricsUseCase
 
     @MockBean
     private lateinit var processCsvUseCase: ProcessCsvUseCase
