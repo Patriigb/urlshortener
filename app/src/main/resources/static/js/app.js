@@ -200,16 +200,7 @@ $(document).ready(
                     success: function (data) {
                         console.log("Data:", data);
 
-                        var resultContainer = $("#resultMetrics");
-
-                        // Limpiar el contenido existente
-                        resultContainer.empty();
-
-                        // Crear elementos HTML para cada propiedad y agregarlos al contenedor
-                        resultContainer.append("<p>Metrica 1: " + data.names[0] + "</p>");
-                        resultContainer.append("<p>Metrica 2: " + data.names[1] + "</p>");
-                        resultContainer.append("<p>Metrica 3: " + data.names[2] + "</p>");
-                        resultContainer.append("<p>Metrica 4: " + data.names[3] + "</p>");
+                        displayMetrics(data)
 
                     },
                     error: function (xhr, status, error) {
@@ -219,4 +210,57 @@ $(document).ready(
             }
 
         );
+        function displayMetrics(data) {
+            var resultContainer = $("#resultMetrics");
+            resultContainer.empty();
+
+            // Crear un contenedor para los botones y aplicar estilos
+            var buttonContainer = $("<div class='button-container'></div>");
+            resultContainer.append(buttonContainer);
+
+            var metrics = [ "disk.total", "jvm.memory.used", "system.cpu.usage"]
+            // Crear botones para cada métrica y agregarlos al contenedor
+            for (var i = 0; i < data.names.length; i++) {
+                var metricName = data.names[i];
+                if (metrics.includes(metricName)) {
+
+                    var button = $("<button class='metric-button'>" + metricName + "</button>");
+
+                    // Agregar un atributo personalizado para almacenar el nombre de la métrica
+                    button.attr("data-metric", metricName);
+
+                    // Agregar un salto de línea antes de cada botón
+                    //resultContainer.append("<br><br>");
+
+                    // Agregar un botón al contenedor
+                    buttonContainer.append(button);
+                } else {
+                    // console.log(metricName + " no está en el array de nombres.");
+                }
+            }
+
+            // Agregar un evento de clic a los botones con la clase 'metric-button'
+            $(".metric-button").on("click", function () {
+                var metricName = $(this).data("metric");
+
+                // Llamar a la función e imprimir el nombre de la métrica
+                console.log(metricName);
+                    $.ajax({
+                     type: "GET",
+                     url: '/api/metrics/' + metricName,
+                     success: function (metricData) {
+                         console.log("Datos de la métrica " + metricName + ":", metricData);
+                         // Mostrar los datos en un alert
+                         // alert("Datos de la métrica " + metricName + ":\n" + JSON.stringify(metricData));
+                         // Dentro de la función success utilizando Bootstrap
+                         $("#myModal .modal-body").html("Datos de la métrica " + metricName + ": " + JSON.stringify(metricData));
+                         $("#myModal").modal('show');
+                     },
+                     error: function (xhr, status, error) {
+                         console.log("Error en la solicitud:", status, error);
+                     }
+                 });
+
+            });
+        }
     });

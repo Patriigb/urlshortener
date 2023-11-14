@@ -11,6 +11,21 @@
     <script src="js/app.js" type="text/javascript">
     </script>
 </head>
+<style>
+    .button-container {
+        position: fixed;
+        left: 50%;
+        top: 50%;
+        transform: translate(-50%, -50%);
+        text-align: left; /* Para alinear el texto a la izquierda dentro del contenedor */
+    }
+
+    .metric-button {
+        margin-bottom: 10px; /* Espaciado entre los botones */
+        display: block; /* Hace que cada botón ocupe toda la anchura del contenedor */
+        width: 150px; /* Establecer la anchura deseada para todos los botones */
+    }
+</style>
 <body>
 <div class="container-full">
     <div class="row">
@@ -66,7 +81,7 @@
         </div>
     </div>
     <div class="row">
-        <div class="col-lg-12 text-center">
+        <div class="col-lg-12 text-left">
             <div class="col-sm-offset-4 col-sm-4 text-center">
                 <br/>
                 <div id="resultMetrics"></div>
