@@ -13,13 +13,18 @@ import java.io.ByteArrayOutputStream
 const val DEFAULT_MAX = 250
 const val DEFAULT_MIN = 0
 
+/**
+ * Given a content returns a [ByteArray] that contains a QR code.
+ */
 interface CreateQrUseCase {
     fun generateQRCode(content: String) : ByteArray
 }
 
+/**
+ * Implementation of [CreateQrUseCase].
+ */
 class CreateQrUseCaseImpl : CreateQrUseCase {
     override fun generateQRCode(content: String) : ByteArray {
-        // definir max y min
         val qrCodeWriter = QRCodeWriter()
         val bitMatrix: BitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, DEFAULT_MAX, DEFAULT_MAX)
 

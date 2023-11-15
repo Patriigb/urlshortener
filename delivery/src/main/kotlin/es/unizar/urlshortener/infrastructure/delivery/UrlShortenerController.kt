@@ -51,6 +51,9 @@ interface UrlShortenerController {
      */
     fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut>
 
+    /**
+     * Gets the summary of a short url identified by its [id].
+     */
     fun getSumary(id: String): ResponseEntity<Sumary>
 
     /**
@@ -58,6 +61,9 @@ interface UrlShortenerController {
      */
     fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String>
 
+    /**
+     * Gets the QR code of a short url identified by its [id].
+     */
     fun getQr(id: String, request: HttpServletRequest): ResponseEntity<ByteArray>
 
     /**
@@ -66,12 +72,15 @@ interface UrlShortenerController {
     // fun getMetrics(): ResponseEntity<Sumary>
 
     /*
-    * Gets a specific the metric
+    * Gets a specific metric
     * */
     fun getMetric(id: String): ResponseEntity<Sumary>
     
 }
 
+/**
+ * Data required to get the summary of a short url.
+ */
 data class Sumary(
     val info: MultiValueMap<String, Pair<String, String>> =  LinkedMultiValueMap()
 )
@@ -177,31 +186,6 @@ class UrlShortenerControllerImpl(
             return ResponseEntity.status(HttpStatus.OK).build()
     }
 
-    // @PostMapping("/{id}/validate")
-    // fun validate(@PathVariable id: String): ResponseEntity<Any> {
-    //     // Lógica de validación
-    //     val isValid = validarId(id)
-
-    //     if (isValid) {
-    //         return ResponseEntity.ok().build()
-    //     } else {
-    //         // Devolver 400 y Retry-After
-    //         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-    //             .header("Retry-After", "60")  // Tiempo en segundos
-    //             .build()
-    //     }
-    // }
-
-    // private fun validarId(id: String): Boolean {
-    //     // Lógica de validación del id (simulado)
-    //     return id.length > 5
-    // }
-
-    // private fun obtenerImagenQr(id: String): ByteArray {
-    //     // Lógica para obtener la imagen QR (simulado)
-    //     return "ImagenQR_$id".toByteArray()
-    // }
-
     @PostMapping("/api/link", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     override fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut> =
         createShortUrlUseCase.create(
@@ -231,7 +215,6 @@ class UrlShortenerControllerImpl(
                     url = url,
                     properties = mapOf(
                         "safe" to it.properties.safe
-                        //"sumary" to headersSumary.body.info ?: Pair("","")
                     )
                 )
             }

@@ -14,7 +14,7 @@ dependencies {
     implementation("org.springframework:spring-core:5.3.12")
     implementation("org.springframework:spring-beans:5.3.12")
     implementation("org.springframework:spring-context:5.3.9")
-    //Para hacer la generacion del Qr
+    // Para hacer la generacion del Qr
     implementation ("com.google.zxing:core:3.4.1")
     // Para la cabecera User-Agent
     implementation ("eu.bitwalker:UserAgentUtils:1.21")

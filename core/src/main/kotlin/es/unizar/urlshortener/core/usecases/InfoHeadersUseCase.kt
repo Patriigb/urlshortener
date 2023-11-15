@@ -11,10 +11,11 @@ import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 
 /**
- * Given a key returns a [Redirection] that contains a [URI target][Redirection.target]
- * and an [HTTP redirection mode][Redirection.mode].
- *
- * **Note**: This is an example of functionality.
+ * getSumary: 
+ * Given a key returns a [MultiValueMap] that contains a [hash] and a [Pair] of [browser] and [opSystem].
+ * 
+ * logHeader:
+ * Given a key and a userAgent, it saves the [opSystem] and [browser] of the user.
  */
 interface InfoHeadersUseCase {
     fun getSumary(key: String): MultiValueMap<String, Pair<String, String>>
@@ -23,13 +24,12 @@ interface InfoHeadersUseCase {
 
 
 /**
- * Implementation of [GetSumaryUseCase].
+ * Implementation of [InfoHeadersUseCase].
  */
 class InfoHeadersUseCaseImpl(
     private val infoHeadersRepository: InfoHeadersRepositoryService
 ) : InfoHeadersUseCase {
     override fun getSumary(key: String) : MultiValueMap<String, Pair<String, String>> {
-        //Iterable<InfoHeaders>
         val info = infoHeadersRepository.findByKey(key) ?: throw RedirectionNotFound(key)
 
         val multiValueMap = LinkedMultiValueMap<String, Pair<String, String>>()

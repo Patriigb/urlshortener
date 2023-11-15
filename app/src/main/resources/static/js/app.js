@@ -3,42 +3,29 @@ $(document).ready(
         var qrDir = null
         var dir = null
         $("#shortener").submit(
-
-            // // Obtén el valor de la casilla de verificación generateQR
-           // val generateQR = $("#generateQR").is(":checked")
-
-            // // Crea un objeto de datos para la solicitud que incluye generateQR
-            // //Esto es lo que mandamos cuando se escribe la url
-            // var requestData = {
-            //     data: $(this).serialize(),
-            //     generateQR: generateQR
-            // };
             
             function (event) {
                 event.preventDefault();
-
-                /**
-                 * Verificar si se ha seleccionado un archivo CSV
-                 */
+            
+                // Verificar si se ha seleccionado un archivo CSV
                 var fileInput = document.getElementById('file');
                 var hayCsv = fileInput && fileInput.files.length > 0;
 
-                /**
-                 * Comprobar si está marcado el check de generar QR
-                 */
-
-                // Obtén el valor de la casilla de verificación generateQR
+               
+                // Comprobar si está marcado el check de generar QR obteniendo
+                // el valor de la casilla de verificación generateQR
                 var generateQR = $("#qr").is(":checked")
 
-                // Crea un objeto de datos para la solicitud que incluye generateQR
-                //Esto es lo que mandamos cuando se escribe la url
-                // Obtén la cadena de consulta serializada
+        
+                // Crear un objeto de datos para la solicitud que incluye generateQR
+                // Esto es lo que se manda cuando se escribe la url
                 var serializedData = $(this).serialize();
 
-                // Agrega el nuevo dato a la cadena de consulta
+                // Agregar el nuevo dato a la cadena de consulta
                 serializedData += "&generateQr=" + generateQR;
                 console.log(serializedData)
 
+                // Enviar la solicitud a /api/link si no hay un archivo CSV
                 if (!hayCsv) {
                     $.ajax({
                         type: "POST",
@@ -47,11 +34,14 @@ $(document).ready(
                         success: function (msg, status, request) {
                             qrDir = msg.qr
                             dir = msg.url
+
+                            // Mostrar el QR si se ha marcado la casilla
                             if (generateQR) {
                                 $("#showQr").show();
                             } else {
                                 $("#showQr").hide();
                             }
+
                             $("#downloadCSV").hide();
                             $("#result").html(
                                 "<div class='alert alert-success lead'><a target='_blank' href='"
@@ -59,19 +49,15 @@ $(document).ready(
                                 + "'>"
                                 + request.getResponseHeader('Location')
                                 + "</a></div>");
-                           // Acceder a la propiedad "sumary" dentro del objeto "properties"
-                    
-                        
                         },
                         error: function () {
                             $("#result").html(
                                 "<div class='alert alert-danger lead'>ERROR</div>");
                         }
                     });
+
+                // Si hay un archivo CSV, entonces se envía a /api/bulk
                 } else {
-                    /**
-                     * Si hay un archivo CSV, entonces se envía a /api/bulk
-                     */
                     var formData = new FormData($(this)[0]);
                     $.ajax({
                         type: "POST",
@@ -88,6 +74,7 @@ $(document).ready(
                             }
                             var isCSV = request.getResponseHeader('Content-Type').includes("text/csv");
                             if (isCSV) {
+
                                 // Crear un enlace para descargar el archivo CSV
                                 var blob = new Blob([msg], { type: "text/csv" });
                                 var csvURL = URL.createObjectURL(blob);
@@ -108,7 +95,6 @@ $(document).ready(
                                 "<div class='alert alert-danger lead'>Error al procesar el archivo CSV</div>");
                         }
                     })
-
                 }
             });
 
@@ -118,37 +104,32 @@ $(document).ready(
                 $.ajax({
                     type: "GET",
                     url: qrDir,
-                    responseType: 'arraybuffer',  // Especifica que la respuesta es un array de bytes
-                        success: function (msg, status, request) {
-                            // Convierte los bytes a una URL Blob
-                        console.log("msg", msg);
+                    responseType: 'arraybuffer',
+                    success: function (msg, status, request) {
                         
                         // Redirigir a la url del QR
                         window.location.href = qrDir;
-                        
                     },
                     error: function (xhr, status, error) {
                         console.log("Error en la solicitud:", status, error);
                     }                    
-                }
-                )
+                })
             }
-
         );
+
         $("#showHeaders").click(
             function (event) {
                 event.preventDefault();
+
                 // Obtiene el último segmento de la URL (el identificador)
                 var idFinal = dir.substring(dir.lastIndexOf('/') + 1);
                 $.ajax({
                     type: "GET",
                     url: '/api/link/'+ idFinal,
-                        success: function (msg, status, request) {
-                            // Convierte los bytes a una URL Blob
-                        console.log("msg", msg);
-                        
+                    success: function (msg, status, request) {
                         var summary = msg.info;
                         console.log("Sum .", summary);
+
                         // Verificar si "sumary" está definido y no es nulo
                         if (summary) {
                             var keys = Object.keys(summary);
@@ -168,29 +149,25 @@ $(document).ready(
                                         }
                                     }
                                 }
-
                                 summaryList += "</tbody></table>";
 
-                                // Ahora puedes agregar summaryList al elemento HTML deseado
+                                // Agregar summaryList al elemento HTML deseado
                                 document.getElementById("userAgent").innerHTML = summaryList;
-                            }
-                            else{
+                            } else {
                                 $("#userAgent").html(
                                     "<div>"
                                     + "URL aún sin acceder"
                                     + "</div>");
                             }
-                        }
-                        
+                        }  
                     },
                     error: function (xhr, status, error) {
                         console.log("Error en la solicitud:", status, error);
                     }                    
-                }
-                )
+                })
             }
-
         );
+
         $("#getMetrics").click(
             function (event) {
                 event.preventDefault();
@@ -199,7 +176,6 @@ $(document).ready(
                     url: '/api/metrics',
                     success: function (data) {
                         console.log("Data:", data);
-
                         displayMetrics(data)
 
                     },
@@ -208,8 +184,8 @@ $(document).ready(
                     }
                 });
             }
-
         );
+
         function displayMetrics(data) {
             var resultContainer = $("#resultMetrics");
             resultContainer.empty();
@@ -217,13 +193,12 @@ $(document).ready(
             // Crear un contenedor para los botones y aplicar estilos
             var buttonContainer = $("<div class='button-container'></div>");
             resultContainer.append(buttonContainer);
-
             var metrics = [ "disk.total", "jvm.memory.used", "system.cpu.usage"]
+
             // Crear botones para cada métrica y agregarlos al contenedor
             for (var i = 0; i < data.names.length; i++) {
                 var metricName = data.names[i];
                 if (metrics.includes(metricName)) {
-
                     var button = $("<button class='metric-button'>" + metricName + "</button>");
 
                     // Agregar un atributo personalizado para almacenar el nombre de la métrica
@@ -276,7 +251,7 @@ $(document).ready(
                          console.log("Error en la solicitud:", status, error);
                      }
                  });
-
             });
         }
-    });
+    }
+);

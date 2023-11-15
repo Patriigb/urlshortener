@@ -31,6 +31,9 @@ data class Redirection(
     val mode: Int = 307
 )
 
+/**
+ * A [InfoHeaders] specifies the [hash] of an url and the [opSystem] and [browser] of the user.
+ */
 data class InfoHeaders(
     val hash: String,
     val opSystem: String,
