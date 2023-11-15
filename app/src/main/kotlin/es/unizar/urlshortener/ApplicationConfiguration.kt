@@ -64,9 +64,6 @@ class ApplicationConfiguration(
     fun processCsvUseCase() = ProcessCsvUseCaseImpl()
 
     @Bean
-    fun metricsUseCase() = MetricsUseCaseImpl()
-
-    @Bean
     fun createShortUrlUseCase() =
     CreateShortUrlUseCaseImpl(shortUrlRepositoryService(), validatorService(), hashService())
     

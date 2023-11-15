@@ -252,4 +252,42 @@ class UrlShortenerControllerTest {
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.statusCode").value(400))
     }
+
+    /*
+    @Test
+    fun `gets list of metrics`() {
+        mockMvc.perform(
+            get("/api/metrics")
+        )
+            .andDo(print())
+            .andExpect(status().isOk)
+            .andExpect(content().contentType("application/json"))
+            .andExpect(jsonPath("$.names").isArray)
+            .andExpect(jsonPath("$.names").isNotEmpty)
+    }
+
+    @Test
+    fun `get specific metric and is ok`() {
+        val metricName = "jvm.memory.used"
+
+        mockMvc.perform(
+            get("/api/metrics/$metricName")
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isOk)
+            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
+            .andExpect(jsonPath("$.name").value(metricName))
+    }
+
+    @Test
+    fun `get specific metric returns NOT_FOUND if metric does not exists`() {
+        val metricName = "exists"
+        mockMvc.perform(
+            get("/api/metrics/$metricName")
+                .contentType(MediaType.APPLICATION_JSON)
+        )
+            .andExpect(status().isNotFound)
+    }
+     */
+
 }

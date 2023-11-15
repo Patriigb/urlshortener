@@ -213,9 +213,9 @@ $(document).ready(
 
             // Agregar un evento de clic a los botones con la clase 'metric-button'
             $(".metric-button").on("click", function () {
-                var metricName = $(this).data("metric");
+                const metricName = $(this).data("metric");
 
-                var metricContainer = $("#metric-info");
+                const metricContainer = $("#metric-info");
                 metricContainer.empty();
 
 
@@ -227,13 +227,13 @@ $(document).ready(
                      success: function (metricData) {
                          console.log("Datos de la métrica " + metricName + ":", metricData);
 
-                         var metricName = metricData.name;
+                         var metricNam = metricData.name;
                          var metricDescription = metricData.description;
                          var metricValue = metricData.measurements[0].value;
                          var metricUnit = metricData.baseUnit
 
                          // Crear un mensaje bonito
-                         var message = `<strong>Nombre:</strong> ${metricName}<br>`
+                         var message = `<strong>Nombre:</strong> ${metricNam}<br>`
                          message += `<strong>Descripción:</strong> ${metricDescription}<br>`
                          if(metricUnit !== undefined){
                              message += `<strong>Valor:</strong> ${metricValue} ${metricUnit}`

@@ -29,6 +29,10 @@ import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.multipart.MultipartFile
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
 
+import java.net.http.HttpClient
+import java.net.http.HttpRequest
+import java.net.http.HttpResponse
+
 const val OK = 200
 const val BAD_REQUEST = 400
 
@@ -69,12 +73,12 @@ interface UrlShortenerController {
     /**
      * Gets the metrics of the system.
      */
-    // fun getMetrics(): ResponseEntity<Sumary>
+    fun getMetrics(request: HttpServletRequest): ResponseEntity<Any>
 
     /*
     * Gets a specific metric
     * */
-    fun getMetric(id: String): ResponseEntity<Sumary>
+    fun getMetric(id: String): ResponseEntity<Any>
     
 }
 
@@ -133,8 +137,7 @@ class UrlShortenerControllerImpl(
     val createQrUseCase: CreateQrUseCase,
     val infoHeadersUseCase: InfoHeadersUseCase,
     val shortUrlRepository: ShortUrlRepositoryService,
-    val processCsvUseCase: ProcessCsvUseCase,
-    val metricsUseCase: MetricsUseCase
+    val processCsvUseCase: ProcessCsvUseCase
 ) : UrlShortenerController {
 
     @GetMapping("/api/link/{id}")
@@ -175,16 +178,38 @@ class UrlShortenerControllerImpl(
         }
     }
 
-    /*@GetMapping("/api/metrics")
-    override fun getMetrics(): ResponseEntity<Summary> {
+    @GetMapping("/api/metrics")
+    override fun getMetrics(request: HttpServletRequest): ResponseEntity<Any> {
+        val client = HttpClient.newBuilder().build()
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:8080/actuator/metrics"))
+            .build();
 
-    }*/
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if(response.statusCode() == OK){
+            return ResponseEntity.ok().header("Content-Type", "application/json")
+                .body(response.body())
+        }
+        // SI NO LO ENCUENTRA ES BAD REQUEST?
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+
+    }
 
     @GetMapping("/api/metrics/{id}")
-    override fun getMetric(@PathVariable("id") id: String): ResponseEntity<Sumary> {
-            metricsUseCase.getMetric(id)
-            return ResponseEntity.status(HttpStatus.OK).build()
+    override fun getMetric(@PathVariable("id") id: String): ResponseEntity<Any> {
+        val client = HttpClient.newBuilder().build()
+        val request = HttpRequest.newBuilder()
+            .uri(URI.create("http://localhost:8080/actuator/metrics/$id"))
+            .build();
+
+        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        if(response.statusCode() == OK){
+            return ResponseEntity.ok().header("Content-Type", "application/json")
+                .body(response.body())
+        }
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
     }
+
 
     @PostMapping("/api/link", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     override fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut> =
