@@ -1,10 +1,8 @@
 package es.unizar.urlshortener.core.usecases
 
 import es.unizar.urlshortener.core.Redirection
-import es.unizar.urlshortener.core.InfoHeaders
 import es.unizar.urlshortener.core.RedirectionNotFound
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
-import es.unizar.urlshortener.core.InfoHeadersRepositoryService
 import eu.bitwalker.useragentutils.UserAgent
 import eu.bitwalker.useragentutils.Browser
 import eu.bitwalker.useragentutils.OperatingSystem

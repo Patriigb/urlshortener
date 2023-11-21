@@ -7,7 +7,6 @@ import es.unizar.urlshortener.core.ShortUrlProperties
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
 import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
-import es.unizar.urlshortener.core.usecases.InfoHeadersUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import es.unizar.urlshortener.core.usecases.MetricsUseCase
@@ -135,14 +134,13 @@ class UrlShortenerControllerImpl(
     val logClickUseCase: LogClickUseCase,
     val createShortUrlUseCase: CreateShortUrlUseCase,
     val createQrUseCase: CreateQrUseCase,
-    val infoHeadersUseCase: InfoHeadersUseCase,
     val shortUrlRepository: ShortUrlRepositoryService,
     val processCsvUseCase: ProcessCsvUseCase
 ) : UrlShortenerController {
 
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> =
-        infoHeadersUseCase.getSumary(id).let{
+        logClickUseCase.getSumary(id).let{
             val response = Sumary(info = it)
             ResponseEntity<Sumary>(response, HttpStatus.OK)
         }
@@ -150,10 +148,10 @@ class UrlShortenerControllerImpl(
     @GetMapping("/{id:(?!api|index).*}")
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> =
         redirectUseCase.redirectTo(id).let {
-            if (request.getHeader("User-Agent") != null) {
-                infoHeadersUseCase.logHeader(id, request.getHeader("User-Agent"))
-            }
-            logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr))
+            // if (request.getHeader("User-Agent") != null) {
+            //     infoHeadersUseCase.logHeader(id, request.getHeader("User-Agent"))
+            // }
+            logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr), request.getHeader("User-Agent"))
             val h = HttpHeaders()
             h.location = URI.create(it.target)
             ResponseEntity<Unit>(h, HttpStatus.valueOf(it.mode))
@@ -164,7 +162,7 @@ class UrlShortenerControllerImpl(
         // Verificar si el id existe en la base de datos
 
         val shortUrl = shortUrlRepository.findByKey(id)
-        if (shortUrl != null) {
+        if (shortUrl != null && shortUrl.properties.qr == true) {
             
             // Obtener la URL completa
             val requestURL = request.requestURL.toString().substringBeforeLast("/qr")
@@ -217,7 +215,8 @@ class UrlShortenerControllerImpl(
             url = data.url,
             data = ShortUrlProperties(
                 ip = request.remoteAddr,
-                sponsor = data.sponsor
+                sponsor = data.sponsor, 
+                qr = data.generateQr
             )
         ).let {
             val h = HttpHeaders()

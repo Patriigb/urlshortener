@@ -18,8 +18,8 @@ data class Click(
 data class ShortUrl(
     val hash: String,
     val redirection: Redirection,
-    val created: OffsetDateTime = OffsetDateTime.now(),
-    val properties: ShortUrlProperties = ShortUrlProperties()
+    val properties: ShortUrlProperties = ShortUrlProperties(),
+    val created: OffsetDateTime = OffsetDateTime.now()
 )
 
 /**
@@ -32,15 +32,6 @@ data class Redirection(
 )
 
 /**
- * A [InfoHeaders] specifies the [hash] of an url and the [opSystem] and [browser] of the user.
- */
-data class InfoHeaders(
-    val hash: String,
-    val opSystem: String,
-    val browser: String
-)
-
-/**
  * A [ShortUrlProperties] is the bag of properties that a [ShortUrl] may have.
  */
 data class ShortUrlProperties(
@@ -48,7 +39,8 @@ data class ShortUrlProperties(
     val sponsor: String? = null,
     val safe: Boolean = true,
     val owner: String? = null,
-    val country: String? = null
+    val country: String? = null,
+    val qr: Boolean? = null
 )
 
 /**

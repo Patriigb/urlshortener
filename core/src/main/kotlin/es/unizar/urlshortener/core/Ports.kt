@@ -4,6 +4,7 @@ package es.unizar.urlshortener.core
  * [ClickRepositoryService] is the port to the repository that provides persistence to [Clicks][Click].
  */
 interface ClickRepositoryService {
+    fun findByKey(id: String): Iterable<Click>?
     fun save(cl: Click): Click
 }
 
@@ -13,14 +14,6 @@ interface ClickRepositoryService {
 interface ShortUrlRepositoryService {
     fun findByKey(id: String): ShortUrl?
     fun save(su: ShortUrl): ShortUrl
-}
-
-/**
- * [ShortUrlRepositoryService] is the port to the repository that provides management to [ShortUrl][ShortUrl].
- */
-interface InfoHeadersRepositoryService {
-    fun findByKey(id: String): Iterable<InfoHeaders>?
-    fun save(ih: InfoHeaders): InfoHeaders
 }
 
 /**

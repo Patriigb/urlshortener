@@ -55,9 +55,6 @@ class UrlShortenerControllerTest {
     private lateinit var createQrUseCase: CreateQrUseCase
 
     @MockBean
-    private lateinit var infoHeadersUseCase: InfoHeadersUseCase
-
-    @MockBean
     private lateinit var shortUrlRepositoryService: ShortUrlRepositoryService
 
     @MockBean
@@ -73,11 +70,11 @@ class UrlShortenerControllerTest {
     fun `getSumary returns an empty headers sumary if url has not been accesed yet`() {
         val expectedInfoMap = LinkedMultiValueMap<String, Pair<String, String>>()
         
-        given(infoHeadersUseCase.getSumary("key")).willReturn(expectedInfoMap)
+        given(logClickUseCase.getSumary("key")).willReturn(expectedInfoMap)
         mockMvc.perform(get("/api/link/{id}", "key"))
             .andExpect(status().isOk)
 
-        verify(infoHeadersUseCase, times(1)).getSumary("key")
+        verify(logClickUseCase, times(1)).getSumary("key")
     }
 
     @Test
@@ -86,7 +83,7 @@ class UrlShortenerControllerTest {
         expectedInfoMap.add("key", Pair("CHROME_11", "WINDOWS_10"))
 
         given(redirectUseCase.redirectTo("key")).willReturn(Redirection("http://example.com/"))
-        given(infoHeadersUseCase.getSumary("key")).willReturn(expectedInfoMap)
+        given(logClickUseCase.getSumary("key")).willReturn(expectedInfoMap)
         
         mockMvc.perform(get("/{id}", "key")
             .header("User-Agent", userAgent))
@@ -96,9 +93,8 @@ class UrlShortenerControllerTest {
         mockMvc.perform(get("/api/link/{id}", "key"))
             .andExpect(status().isOk)
 
-        verify(infoHeadersUseCase, times(1)).getSumary("key")
-        verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"))
-        verify(infoHeadersUseCase).logHeader("key", userAgent)
+        verify(logClickUseCase, times(1)).getSumary("key")
+        verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"), userAgent)
     }
 
     @Test
@@ -153,7 +149,7 @@ class UrlShortenerControllerTest {
             .andExpect(status().isTemporaryRedirect)
             .andExpect(redirectedUrl("http://example.com/"))
 
-        verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"))
+        verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"), null)
     }
 
     @Test
@@ -166,14 +162,14 @@ class UrlShortenerControllerTest {
             .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.statusCode").value(404))
 
-        verify(logClickUseCase, never()).logClick("key", ClickProperties(ip = "127.0.0.1"))
+        verify(logClickUseCase, never()).logClick("key", ClickProperties(ip = "127.0.0.1"), userAgent)
     }
 
     @Test
     fun `getQr returns Ok if key exists`() {
 
         given(shortUrlRepositoryService.findByKey("f684a3c4")).willReturn(ShortUrl(
-            "f684a3c4",Redirection("http://example.com/")
+            "f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true)
         ))
        
         mockMvc.perform(get("/{id}/qr", "f684a3c4"))
@@ -198,7 +194,7 @@ class UrlShortenerControllerTest {
         given(
             createShortUrlUseCase.create(
                 url = "http://example.com/",
-                data = ShortUrlProperties(ip = "127.0.0.1")
+                data = ShortUrlProperties(ip = "127.0.0.1", qr = true)
             )
         ).willReturn(ShortUrl("f684a3c4", Redirection("http://example.com/")))
 
