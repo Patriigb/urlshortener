@@ -160,7 +160,6 @@ class UrlShortenerControllerImpl(
     @GetMapping("/{id}/qr")
     override fun getQr(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<ByteArray> {
         // Verificar si el id existe en la base de datos
-
         val shortUrl = shortUrlRepository.findByKey(id)
         if (shortUrl != null && shortUrl.properties.qr == true) {
             
@@ -230,7 +229,8 @@ class UrlShortenerControllerImpl(
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
-                        "safe" to it.properties.safe
+                        "safe" to it.properties.safe,
+                        "qr" to data.generateQr
                     ),
                     qr = urlQr
                 )
@@ -238,7 +238,8 @@ class UrlShortenerControllerImpl(
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
-                        "safe" to it.properties.safe
+                        "safe" to it.properties.safe,
+                        "qr" to data.generateQr
                     )
                 )
             }
