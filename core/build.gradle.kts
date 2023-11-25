@@ -18,5 +18,7 @@ dependencies {
     implementation ("com.google.zxing:core:3.4.1")
     // Para la cabecera User-Agent
     implementation ("eu.bitwalker:UserAgentUtils:1.21")
+    // Para procesar el csv
+    implementation("com.opencsv:opencsv:5.6")
 
 }

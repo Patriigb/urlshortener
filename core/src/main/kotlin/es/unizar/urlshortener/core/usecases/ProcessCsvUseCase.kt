@@ -1,15 +1,8 @@
       
 package es.unizar.urlshortener.core.usecases
 
-import com.google.zxing.BarcodeFormat
-import com.google.zxing.MultiFormatWriter
-import com.google.zxing.common.BitMatrix
-import com.google.zxing.qrcode.QRCodeWriter
-import java.io.File
-import javax.imageio.ImageIO
-import java.awt.Color
-import java.awt.image.BufferedImage
-import java.io.ByteArrayOutputStream
+import com.opencsv.CSVReader
+import java.io.StringReader
 
 const val BAD_REQUEST = 400
 const val OK = 200
@@ -35,22 +28,16 @@ interface ProcessCsvUseCase {
 class ProcessCsvUseCaseImpl : ProcessCsvUseCase {
     override fun checkCsvContent(csvContent: String) : CsvContent {
         // Comprobaciones del csv
-        var result: CsvContent
         if (csvContent.isEmpty()) {
-            result = CsvContent(OK)
-        } else {
-
-            val lines = csvContent.split("\n").map { it.trim() }
-            result = CsvContent(0, lines)
-
-            if (lines.size < 1 || lines[0].split(",")[0] != "URI") {
-                return CsvContent(BAD_REQUEST)
-            }
-
-            if (lines[0].split(",").size > 1 && lines[0].split(",")[1] == "QR") {
-                result = CsvContent(1, lines)
-            }
+            return CsvContent(OK)
         }
-        return result
+
+        val lines = CSVReader(StringReader(csvContent)).readAll().map { it.map(String::trim) }
+
+        return when {
+            lines.isEmpty() || lines[0][0] != "URI" -> CsvContent(BAD_REQUEST)
+            lines[0].size > 1 && lines[0][1] == "QR" -> CsvContent(1, lines.map { it.joinToString(",") })
+            else -> CsvContent(0, lines.map { it.joinToString(",") })
+        }
     }
 }

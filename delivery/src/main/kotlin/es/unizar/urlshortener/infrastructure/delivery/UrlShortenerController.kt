@@ -2,6 +2,8 @@
 
 package es.unizar.urlshortener.infrastructure.delivery
 
+import com.opencsv.CSVReader
+import com.opencsv.CSVWriter
 import es.unizar.urlshortener.core.ClickProperties
 import es.unizar.urlshortener.core.ShortUrlProperties
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
@@ -27,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestParam
 import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.multipart.MultipartFile
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
+import java.io.StringReader
+import java.io.StringWriter
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -249,41 +253,52 @@ class UrlShortenerControllerImpl(
     @PostMapping("/api/bulk", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     override fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String> {
         val csvContent = data.file.bytes.toString(Charsets.UTF_8)
-        val h = HttpHeaders()
-        h.contentType = MediaType.parseMediaType("text/csv")
-        var checkQr : Boolean
-        var urlQr = ""
-        var lines : List<String>
         
-        processCsvUseCase.checkCsvContent(csvContent).let {
-            if (it.result == BAD_REQUEST || it.result == OK) {
-                return ResponseEntity(HttpStatus.valueOf(it.result))
-            } else {
-                checkQr = it.result == 1
-                lines = it.content
-            }
+        val result = processCsvUseCase.checkCsvContent(csvContent)
+        if (result.result == BAD_REQUEST || result.result == OK) {
+            return ResponseEntity(HttpStatus.valueOf(result.result))
         }
 
-        val resultCsv = StringBuilder("URI,URI_Recortada,Mensaje\n")
+        val checkQr = result.result == 1
+        val lines = CSVReader(StringReader(csvContent)).readAll().map { it.map(String::trim) }
+
+        val h = HttpHeaders().apply { contentType = MediaType.parseMediaType("text/csv") }
+
+        val resultCsv = StringWriter()
+        val csvWriter = CSVWriter(resultCsv)
+        csvWriter.writeNext(arrayOf("URI", "URI_Recortada", "Mensaje"), false)
+
         var firstUri = true
         for (i in 1 until lines.size) {
             var line = lines[i]
-            val uri = line.split(",")[0]
-            val qr = if (checkQr && line.split(",").size > 1 && line.split(",")[1] != "") line.split(",")[1] else null
+            val uri = line[0]
+            val qr = if (checkQr && line.size > 1 && line[1].isNotBlank()) line[1] else null
             
             val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, data, request)
-            if (firstUri) {
-                h.location = shortenedUri
-                firstUri = false
-            }
-
+            if (firstUri) h.location = shortenedUri
+            firstUri = false
+            
             if (checkQr) { 
-                if (qr != "") urlQr = shortenedUri.toString() + "/qr"
-                resultCsv.append("$originalUri,$shortenedUri,$urlQr,$errorMessage\n")
+                // generar el qr
+                var urlQr = ""
+                if (errorMessage.isBlank() && qr != null) {
+                    urlQr = "$shortenedUri/qr"
+                    createShortUrlUseCase.create(
+                        url = originalUri,
+                        data = ShortUrlProperties(
+                            ip = request.remoteAddr,
+                            qr = true
+                        )
+                    )
+                }
+                
+                csvWriter.writeNext(arrayOf(originalUri, "$shortenedUri", urlQr, errorMessage), false)
             } else {
-                resultCsv.append("$originalUri,$shortenedUri,$errorMessage\n")
+                csvWriter.writeNext(arrayOf(originalUri, "$shortenedUri", errorMessage), false)
             }
         }
+
+        csvWriter.close()
         return ResponseEntity(resultCsv.toString(), h, HttpStatus.CREATED)
     }
 

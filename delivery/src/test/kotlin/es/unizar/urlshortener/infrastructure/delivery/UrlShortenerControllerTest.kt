@@ -2,6 +2,7 @@
 
 package es.unizar.urlshortener.infrastructure.delivery
 
+import com.opencsv.CSVWriter
 import es.unizar.urlshortener.core.*
 import es.unizar.urlshortener.core.usecases.*
 import org.junit.jupiter.api.Assertions.assertEquals
@@ -28,6 +29,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import java.io.StringWriter
 import java.net.URI
 
 @WebMvcTest
@@ -118,8 +120,13 @@ class UrlShortenerControllerTest {
             .andExpect(header().string(HttpHeaders.LOCATION, "http://localhost/f684a3c4"))
             .andReturn()
 
-        val expectedCsv = "URI,URI_Recortada,Mensaje\nhttp://example.com,http://localhost/f684a3c4,\n"
-        assertEquals(expectedCsv, response.response.contentAsString)
+        // construct expected CSV with openCSV
+        val expectedCsv = StringWriter()
+        val csvWriter = CSVWriter(expectedCsv)
+        csvWriter.writeNext(arrayOf("URI", "URI_Recortada", "Mensaje"), false)
+        csvWriter.writeNext(arrayOf("http://example.com","http://localhost/f684a3c4", ""), false)
+
+        assertEquals(expectedCsv.toString(), response.response.contentAsString)
     }
 
     @Test
