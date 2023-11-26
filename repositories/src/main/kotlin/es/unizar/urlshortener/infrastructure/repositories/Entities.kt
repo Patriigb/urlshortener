@@ -41,7 +41,10 @@ class ShortUrlEntity(
     val safe: Boolean,
     val ip: String?,
     val country: String?,
-    val qr: Boolean?
+    val qr: Boolean?,
+
+    @Column(length = 6000)
+    val qrImage: ByteArray?
 )
 
 // /**

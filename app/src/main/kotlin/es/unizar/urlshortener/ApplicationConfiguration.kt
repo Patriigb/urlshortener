@@ -8,6 +8,7 @@ import es.unizar.urlshortener.core.usecases.LogClickUseCaseImpl
 import es.unizar.urlshortener.core.usecases.MetricsUseCaseImpl
 import es.unizar.urlshortener.core.usecases.ProcessCsvUseCaseImpl
 import es.unizar.urlshortener.core.usecases.RedirectUseCaseImpl
+import es.unizar.urlshortener.core.QueueController
 
 import es.unizar.urlshortener.infrastructure.delivery.HashServiceImpl
 import es.unizar.urlshortener.infrastructure.delivery.ValidatorServiceImpl
@@ -18,6 +19,8 @@ import es.unizar.urlshortener.infrastructure.repositories.ShortUrlRepositoryServ
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.scheduling.annotation.EnableAsync
+import org.springframework.scheduling.annotation.EnableScheduling
 
 /**
  * Wires use cases with service implementations, and services implementations with repositories.
@@ -25,6 +28,8 @@ import org.springframework.context.annotation.Configuration
  * **Note**: Spring Boot is able to discover this [Configuration] without further configuration.
  */
 @Configuration
+@EnableScheduling
+@EnableAsync
 class ApplicationConfiguration(
     @Autowired val shortUrlEntityRepository: ShortUrlEntityRepository,
     @Autowired val clickEntityRepository: ClickEntityRepository
@@ -48,13 +53,13 @@ class ApplicationConfiguration(
     fun logClickUseCase() = LogClickUseCaseImpl(clickRepositoryService())
     
     @Bean
-    fun createQrUseCase() = CreateQrUseCaseImpl()
+    fun createQrUseCase() = CreateQrUseCaseImpl(shortUrlRepositoryService())
 
     @Bean
     fun processCsvUseCase() = ProcessCsvUseCaseImpl()
 
     @Bean
     fun createShortUrlUseCase() =
-    CreateShortUrlUseCaseImpl(shortUrlRepositoryService(), validatorService(), hashService())
+    CreateShortUrlUseCaseImpl(shortUrlRepositoryService(), validatorService(), hashService(), createQrUseCase())
     
 }

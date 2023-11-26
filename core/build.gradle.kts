@@ -21,4 +21,6 @@ dependencies {
     // Para procesar el csv
     implementation("com.opencsv:opencsv:5.6")
 
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
+
 }

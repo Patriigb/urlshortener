@@ -9,6 +9,9 @@ import javax.imageio.ImageIO
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import es.unizar.urlshortener.core.ShortUrl
+import es.unizar.urlshortener.core.ShortUrlProperties
+import es.unizar.urlshortener.core.ShortUrlRepositoryService
 
 const val DEFAULT_MAX = 250
 const val DEFAULT_MIN = 0
@@ -17,14 +20,16 @@ const val DEFAULT_MIN = 0
  * Given a content returns a [ByteArray] that contains a QR code.
  */
 interface CreateQrUseCase {
-    fun generateQRCode(content: String) : ByteArray
+    fun generateQRCode(content: String, su: ShortUrl)
 }
 
 /**
  * Implementation of [CreateQrUseCase].
  */
-class CreateQrUseCaseImpl : CreateQrUseCase {
-    override fun generateQRCode(content: String) : ByteArray {
+class CreateQrUseCaseImpl(
+    private val shortUrlRepository: ShortUrlRepositoryService
+) : CreateQrUseCase {
+    override fun generateQRCode(content: String, su: ShortUrl)  {
         val qrCodeWriter = QRCodeWriter()
         val bitMatrix: BitMatrix = qrCodeWriter.encode(content, BarcodeFormat.QR_CODE, DEFAULT_MAX, DEFAULT_MAX)
 
@@ -37,6 +42,18 @@ class CreateQrUseCaseImpl : CreateQrUseCase {
 
         val byteArrayOutputStream = ByteArrayOutputStream()
         ImageIO.write(bufferedImage, "png", byteArrayOutputStream)
-        return byteArrayOutputStream.toByteArray()
+
+        val newSu = ShortUrl(
+            hash = su.hash,
+            redirection = su.redirection,
+            properties = ShortUrlProperties(
+                safe = su.properties.safe,
+                ip = su.properties.ip,
+                sponsor = su.properties.sponsor,
+                qr = su.properties.qr,
+                qrImage = byteArrayOutputStream.toByteArray()
+            )
+        )
+        shortUrlRepository.save(newSu)
     }
 }

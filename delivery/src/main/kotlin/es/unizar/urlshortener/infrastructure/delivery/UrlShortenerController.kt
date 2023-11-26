@@ -12,6 +12,7 @@ import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import es.unizar.urlshortener.core.usecases.MetricsUseCase
+import es.unizar.urlshortener.core.QueueController
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.hateoas.server.mvc.linkTo
 import org.springframework.http.HttpHeaders
@@ -31,10 +32,21 @@ import org.springframework.web.multipart.MultipartFile
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import java.io.StringReader
 import java.io.StringWriter
+import java.util.concurrent.BlockingQueue
+import java.util.concurrent.LinkedBlockingQueue
+import java.util.concurrent.ConcurrentLinkedQueue
+import org.springframework.scheduling.annotation.Async
+import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+
+
 
 const val OK = 200
 const val BAD_REQUEST = 400
@@ -133,14 +145,60 @@ data class ShortInfo(
  * **Note**: Spring Boot is able to discover this [RestController] without further configuration.
  */
 @RestController
+@EnableScheduling
+@Component
 class UrlShortenerControllerImpl(
     val redirectUseCase: RedirectUseCase,
     val logClickUseCase: LogClickUseCase,
     val createShortUrlUseCase: CreateShortUrlUseCase,
     val createQrUseCase: CreateQrUseCase,
     val shortUrlRepository: ShortUrlRepositoryService,
-    val processCsvUseCase: ProcessCsvUseCase
+    val processCsvUseCase: ProcessCsvUseCase,
+    val controlador: QueueController
 ) : UrlShortenerController {
+
+    // val cola: BlockingQueue<suspend () -> Unit> = LinkedBlockingQueue()
+
+    // fun insertarComando(funcion: suspend () -> Unit) {
+    //     // Inserta el comando en la cola bloqueante
+    //     cola.put(funcion)
+    //     println("Comando insertado: $funcion")
+    // }
+
+    
+    // fun takeFromQueue() : suspend () -> Unit {
+    //     // var comando: suspend () -> Unit? = null
+    //     // try {
+    //        // while (true) {
+    //             // Bloquea hasta que haya un elemento en la cola
+    //     val comando = cola.take()
+    //     println("Consumidor ejecutando comando: $comando")
+
+    //             // Aquí puedes agregar la lógica para procesar el comando según tus necesidades
+    //             // }
+    //     // } catch (e: InterruptedException) {
+    //     //         Thread.currentThread().interrupt()
+    //     // }
+    //     return comando
+    // }
+
+    // @Async
+    // fun producerMethod(funcion: suspend () -> Unit) = GlobalScope.launch {
+    //     insertarComando(funcion)
+    // }
+
+    // @Scheduled(fixedRate = 1000)
+    // fun consumerMethod() { GlobalScope.launch {
+    //     // Consumer logic
+    //     println("holaaaaaaaaaaaaaaa")
+    //     val comando = takeFromQueue()
+    //     // Procesa el comando según tus necesidades
+    //     if (comando != null) {
+    //         // Procesa el comando según tus necesidades
+    //         comando.invoke()
+    //     }
+    // }
+    // }
 
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> =
@@ -168,11 +226,10 @@ class UrlShortenerControllerImpl(
         if (shortUrl != null && shortUrl.properties.qr == true) {
             
             // Obtener la URL completa
-            val requestURL = request.requestURL.toString().substringBeforeLast("/qr")
-            val qrImage = createQrUseCase.generateQRCode(requestURL)
-            
+            // val requestURL = request.requestURL.toString().substringBeforeLast("/qr")
+            // val qrImage = createQrUseCase.generateQRCode(requestURL)
             // Devolver imagen con tipo de contenido correcto
-            return ResponseEntity.ok().header("Content-Type", "image/png").body(qrImage)
+            return ResponseEntity.ok().header("Content-Type", "image/png").body(shortUrl.properties.qrImage)
         } else {
             // Devolver 404 si el id no existe
             return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
@@ -226,10 +283,17 @@ class UrlShortenerControllerImpl(
             val url = linkTo<UrlShortenerControllerImpl> { redirectTo(it.hash, request) }.toUri()
             h.location = url
 
+
             // url del qr más /qr
             val response = if (data.generateQr == true) {
                 val urlQr = url.toString() + "/qr"
                 // comprobar que headersSumary no es null
+                val miFuncion: suspend () -> Unit = {
+                    createQrUseCase.generateQRCode(urlQr, it)
+                }
+                controlador.producerMethod(miFuncion)
+                
+              //  controlador.consumerMethod()
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
