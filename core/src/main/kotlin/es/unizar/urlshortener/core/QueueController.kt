@@ -1,36 +1,40 @@
 package es.unizar.urlshortener.core
 
 import java.util.concurrent.BlockingQueue
+import kotlinx.coroutines.CoroutineScope
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ConcurrentLinkedQueue
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.Job
 
 
 interface QueueController {
-    fun insertarComando(funcion: suspend () -> Unit)
+    fun insertarComando(nombre: String, funcion: suspend () -> Unit)
 
     fun takeFromQueue() : suspend () -> Unit
     
-    fun producerMethod(funcion: suspend () -> Unit)
+    fun producerMethod(nombre: String, funcion: suspend () -> Unit)
 
     fun consumerMethod()
+
+    fun consumerMethod2()
 }
 
 @EnableScheduling
 @Component
 class QueueControllerImpl : QueueController {
-    val cola: BlockingQueue<suspend () -> Unit> = LinkedBlockingQueue()
+    val cola: BlockingQueue<Pair<String, suspend () -> Unit>> = LinkedBlockingQueue()
 
-    override fun insertarComando(funcion: suspend () -> Unit) {
+    override fun insertarComando(nombre: String, funcion: suspend () -> Unit) {
         // Inserta el comando en la cola bloqueante
-        cola.put(funcion)
-        println("Comando insertado: $funcion")
+        println("Comando insertado: $nombre")
+        cola.put(nombre to funcion)
     }
 
     
@@ -39,8 +43,8 @@ class QueueControllerImpl : QueueController {
         // try {
            // while (true) {
                 // Bloquea hasta que haya un elemento en la cola
-        val comando = cola.take()
-        println("Consumidor ejecutando comando: $comando")
+        val (tag, comando) = cola.take()
+        println("Consumidor ejecutando comando: $tag")
 
                 // Aquí puedes agregar la lógica para procesar el comando según tus necesidades
                 // }
@@ -51,19 +55,23 @@ class QueueControllerImpl : QueueController {
     }
 
     @Async
-    override fun producerMethod(funcion: suspend () -> Unit) {
-        insertarComando(funcion)
+    override fun producerMethod(nombre: String, funcion: suspend () -> Unit) {
+        insertarComando(nombre,funcion)
     }
 
     @Scheduled(fixedRate = 100)
-    override fun consumerMethod() { GlobalScope.launch {
-        // Consumer logic
-        val comando = takeFromQueue()
-        // Procesa el comando según tus necesidades
-        if (comando != null) {
-            // Procesa el comando según tus necesidades
-            comando.invoke()
+    override fun consumerMethod() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val command = takeFromQueue()
+            command.invoke()
         }
     }
+
+    @Scheduled(fixedRate = 101)
+    override fun consumerMethod2() {
+        CoroutineScope(Dispatchers.IO).launch {
+            val command = takeFromQueue()
+            command.invoke()
+        }
     }
 }

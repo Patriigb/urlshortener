@@ -60,6 +60,12 @@ class UrlShortenerControllerTest {
     private lateinit var shortUrlRepositoryService: ShortUrlRepositoryService
 
     @MockBean
+    private lateinit var queueController: QueueController
+
+    @MockBean
+    private lateinit var interstitialAdsConfig: InterstitialAdsConfig
+
+    @MockBean
     private lateinit var metricsUseCase: MetricsUseCase
 
     @MockBean
@@ -96,7 +102,7 @@ class UrlShortenerControllerTest {
             .andExpect(status().isOk)
 
         verify(logClickUseCase, times(1)).getSumary("key")
-        verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"), userAgent)
+        verify(queueController).producerMethod(any(), any())
     }
 
     @Test
@@ -155,8 +161,8 @@ class UrlShortenerControllerTest {
         mockMvc.perform(get("/{id}", "key"))
             .andExpect(status().isTemporaryRedirect)
             .andExpect(redirectedUrl("http://example.com/"))
-
-        verify(logClickUseCase).logClick("key", ClickProperties(ip = "127.0.0.1"), null)
+        
+        verify(queueController).producerMethod(any(), any())
     }
 
     @Test
@@ -183,7 +189,8 @@ class UrlShortenerControllerTest {
             .andDo(print())
             .andExpect(status().isOk)
 
-        verify(createQrUseCase).generateQRCode("http://localhost/f684a3c4")
+        verify(shortUrlRepositoryService).findByKey("f684a3c4")
+    
     }
 
     @Test
@@ -193,7 +200,8 @@ class UrlShortenerControllerTest {
             .andDo(print())
             .andExpect(status().isNotFound)
 
-        verify(createQrUseCase, never()).generateQRCode("http://localhost/key")
+        verify(createQrUseCase, never()).generateQRCode("http://localhost/key", 
+        ShortUrl("key", Redirection("http://example.com/")))
     }
 
     @Test

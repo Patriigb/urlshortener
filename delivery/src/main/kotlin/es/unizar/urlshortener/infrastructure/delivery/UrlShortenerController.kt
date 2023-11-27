@@ -4,6 +4,7 @@ package es.unizar.urlshortener.infrastructure.delivery
 
 import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
+import com.google.common.util.concurrent.RateLimiter
 import es.unizar.urlshortener.core.ClickProperties
 import es.unizar.urlshortener.core.ShortUrlProperties
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
@@ -13,6 +14,7 @@ import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import es.unizar.urlshortener.core.usecases.MetricsUseCase
 import es.unizar.urlshortener.core.QueueController
+import es.unizar.urlshortener.core.RedirectionNotFound
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.hateoas.server.mvc.linkTo
 import org.springframework.http.HttpHeaders
@@ -39,6 +41,9 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
+import org.springframework.boot.context.properties.ConfigurationProperties
+import org.springframework.context.annotation.Configuration
+import org.springframework.beans.factory.annotation.Autowired
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
@@ -52,6 +57,10 @@ import java.net.http.HttpResponse
 
 const val OK = 200
 const val BAD_REQUEST = 400
+const val TEMPORARY_REDIRECT = 307
+const val TOO_MANY_REQUESTS = 429
+const val SEC = 5
+const val RATE = 20.0
 
 /**
  * The specification of the controller.
@@ -141,6 +150,12 @@ data class ShortInfo(
     val errorMessage: String
 )
 
+@Configuration
+@ConfigurationProperties("interstitial-ads")
+class InterstitialAdsConfig {
+    var enabled: Boolean = false
+}
+
 /**
  * The implementation of the controller.
  *
@@ -161,67 +176,67 @@ class UrlShortenerControllerImpl(
 
 ) : UrlShortenerController {
 
-    // val cola: BlockingQueue<suspend () -> Unit> = LinkedBlockingQueue()
+    @Autowired
+    private lateinit var interstitialAdsConfig: InterstitialAdsConfig
 
-    // fun insertarComando(funcion: suspend () -> Unit) {
-    //     // Inserta el comando en la cola bloqueante
-    //     cola.put(funcion)
-    //     println("Comando insertado: $funcion")
-    // }
-
-    
-    // fun takeFromQueue() : suspend () -> Unit {
-    //     // var comando: suspend () -> Unit? = null
-    //     // try {
-    //        // while (true) {
-    //             // Bloquea hasta que haya un elemento en la cola
-    //     val comando = cola.take()
-    //     println("Consumidor ejecutando comando: $comando")
-
-    //             // Aquí puedes agregar la lógica para procesar el comando según tus necesidades
-    //             // }
-    //     // } catch (e: InterruptedException) {
-    //     //         Thread.currentThread().interrupt()
-    //     // }
-    //     return comando
-    // }
-
-    // @Async
-    // fun producerMethod(funcion: suspend () -> Unit) = GlobalScope.launch {
-    //     insertarComando(funcion)
-    // }
-
-    // @Scheduled(fixedRate = 1000)
-    // fun consumerMethod() { GlobalScope.launch {
-    //     // Consumer logic
-    //     println("holaaaaaaaaaaaaaaa")
-    //     val comando = takeFromQueue()
-    //     // Procesa el comando según tus necesidades
-    //     if (comando != null) {
-    //         // Procesa el comando según tus necesidades
-    //         comando.invoke()
-    //     }
-    // }
-    // }
+    private val rateLimiterSum = RateLimiter.create(RATE)
 
     @GetMapping("/api/link/{id}")
-    override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> =
-        logClickUseCase.getSumary(id).let{
-            val response = Sumary(info = it)
-            ResponseEntity<Sumary>(response, HttpStatus.OK)
-        }
+    override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> {
+            println("el id es: " + id)
+            if (!rateLimiterSum.tryAcquire()) {
+                // No se adquirió el permiso, demasiadas solicitudes
+                val retryAfterSeconds = SEC // Ajusta este valor según tus necesidades
+                val headers = HttpHeaders()
+                headers.set(HttpHeaders.RETRY_AFTER, retryAfterSeconds.toString())
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(headers).build()
+            }
 
+            val datos = logClickUseCase.getSumary(id)
+
+            val response = Sumary(info = datos)
+            return ResponseEntity<Sumary>(response, HttpStatus.OK)
+    }
+
+    private val rateLimiterRed = RateLimiter.create(RATE)
+    
     @GetMapping("/{id:(?!api|index).*}")
-    override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> =
-        redirectUseCase.redirectTo(id).let {
-            // if (request.getHeader("User-Agent") != null) {
-            //     infoHeadersUseCase.logHeader(id, request.getHeader("User-Agent"))
-            // }
-            logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr), request.getHeader("User-Agent"))
-            val h = HttpHeaders()
-            h.location = URI.create(it.target)
-            ResponseEntity<Unit>(h, HttpStatus.valueOf(it.mode))
-        }
+    override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> {
+            // Intenta adquirir un permiso del RateLimiter
+            if (!rateLimiterRed.tryAcquire()) {
+                // No se adquirió el permiso, demasiadas solicitudes
+                val retryAfterSeconds = SEC // Ajusta este valor según tus necesidades
+                val headers = HttpHeaders()
+                headers.set(HttpHeaders.RETRY_AFTER, retryAfterSeconds.toString())
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(headers).build()
+            }
+
+            val redirection = redirectUseCase.redirectTo(id)
+        
+            val hasInterstitial = interstitialAdsConfig.enabled
+
+            val statusCode = if (!hasInterstitial) {
+                // No hay publicidad intersticial
+                HttpStatus.TEMPORARY_REDIRECT
+            } else {
+                // Hay publicidad intersticial
+                HttpStatus.OK
+            }
+
+            val logFunction: suspend () -> Unit = {
+                logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr), request.getHeader("User-Agent"))
+            }
+            controlador.producerMethod("logClick", logFunction)
+
+            val headers = HttpHeaders()
+
+            if (!hasInterstitial) {
+                // No hay publicidad intersticial, se agrega la cabecera Location para redirección
+                headers.location = URI.create(redirection.target)
+            }
+
+            return ResponseEntity<Unit>(headers, statusCode)
+    }
 
     @GetMapping("/{id}/qr")
     override fun getQr(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<ByteArray> {
@@ -229,9 +244,6 @@ class UrlShortenerControllerImpl(
         val shortUrl = shortUrlRepository.findByKey(id)
         if (shortUrl != null && shortUrl.properties.qr == true) {
             
-            // Obtener la URL completa
-            // val requestURL = request.requestURL.toString().substringBeforeLast("/qr")
-            // val qrImage = createQrUseCase.generateQRCode(requestURL)
             // Devolver imagen con tipo de contenido correcto
             return ResponseEntity.ok().header("Content-Type", "image/png").body(shortUrl.properties.qrImage)
         } else {
@@ -304,7 +316,7 @@ class UrlShortenerControllerImpl(
                 val miFuncion: suspend () -> Unit = {
                     createQrUseCase.generateQRCode(urlQr, it)
                 }
-                controlador.producerMethod(miFuncion)
+                controlador.producerMethod("generateQRCode", miFuncion)
                 
               //  controlador.consumerMethod()
                 ShortUrlDataOut(

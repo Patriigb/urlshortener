@@ -3,6 +3,7 @@ package es.unizar.urlshortener.core.usecases
 import es.unizar.urlshortener.core.Click
 import es.unizar.urlshortener.core.ClickProperties
 import es.unizar.urlshortener.core.ClickRepositoryService
+import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import es.unizar.urlshortener.core.RedirectionNotFound
 import eu.bitwalker.useragentutils.UserAgent
 import eu.bitwalker.useragentutils.Browser
@@ -24,9 +25,13 @@ interface LogClickUseCase {
  * Implementation of [LogClickUseCase].
  */
 class LogClickUseCaseImpl(
-    private val clickRepository: ClickRepositoryService
+    private val clickRepository: ClickRepositoryService,
+    private val shortUrlRepository: ShortUrlRepositoryService
 ) : LogClickUseCase {
     override fun getSumary(key: String) : MultiValueMap<String, Pair<String, String>> {
+        println("key: " + key)
+        shortUrlRepository.findByKey(key)?.redirection?: throw RedirectionNotFound(key)
+
         val info = clickRepository.findByKey(key) ?: throw RedirectionNotFound(key)
 
         val multiValueMap = LinkedMultiValueMap<String, Pair<String, String>>()
