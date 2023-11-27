@@ -6,6 +6,11 @@ package es.unizar.urlshortener.core
 interface ClickRepositoryService {
     fun findByKey(id: String): Iterable<Click>?
     fun save(cl: Click): Click
+    // fun getAllClicks(): Iterable<Click>?
+    fun countClicksByOperatingSystem(osName: String): Int
+    fun findAllOperatingSystems(): List<String>
+
+
 }
 
 /**

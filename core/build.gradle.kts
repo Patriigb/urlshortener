@@ -23,4 +23,6 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
 
+    implementation("org.springframework.boot:spring-boot-starter-actuator:2.7.0")
+    implementation("io.micrometer:micrometer-registry-prometheus:1.12.0") 
 }

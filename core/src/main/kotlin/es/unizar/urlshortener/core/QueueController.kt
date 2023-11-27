@@ -24,7 +24,7 @@ interface QueueController {
 
 @EnableScheduling
 @Component
-class QueueControllerImpl() : QueueController {
+class QueueControllerImpl : QueueController {
     val cola: BlockingQueue<suspend () -> Unit> = LinkedBlockingQueue()
 
     override fun insertarComando(funcion: suspend () -> Unit) {

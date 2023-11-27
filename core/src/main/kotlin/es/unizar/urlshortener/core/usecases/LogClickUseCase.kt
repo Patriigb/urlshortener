@@ -70,4 +70,5 @@ class LogClickUseCaseImpl(
             clickRepository.save(cl)
         }
     }
+
 }

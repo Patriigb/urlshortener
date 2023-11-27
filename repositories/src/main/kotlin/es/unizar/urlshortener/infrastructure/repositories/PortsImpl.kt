@@ -14,6 +14,28 @@ class ClickRepositoryServiceImpl(
 
     override fun findByKey(id: String): Iterable<Click>? = 
     clickEntityRepository.findByHash(id)?.map { it.toDomain() }
+
+    // override fun getAllClicks(): Iterable<Click>? =
+    //     clickEntityRepository.findAll().map { it.toDomain() } 
+
+    override fun countClicksByOperatingSystem(osName: String): Int {
+        println("countClicksByOperatingSystem")
+        println("osName: $osName")
+        println(clickEntityRepository.findAll()
+            .filter { it.platform == osName }
+            .count())
+            
+        return clickEntityRepository.findAll()
+            .filter { it.platform == osName }
+            .count()
+        // clickEntityRepository.getAllClicks()
+        // return clickEntityRepository.countByOperatingSystem(osName)
+    } 
+    
+    override fun findAllOperatingSystems(): List<String> {
+        println("findAllOperatingSystems")
+        return clickEntityRepository.findAll().mapNotNull { it.platform }
+    } 
 }
 
 /**

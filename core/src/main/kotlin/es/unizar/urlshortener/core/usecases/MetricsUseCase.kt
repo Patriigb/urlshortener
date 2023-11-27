@@ -2,66 +2,100 @@
 
 package es.unizar.urlshortener.core.usecases
 
-//import com.github.kittinunf.fuel.httpGet
+import es.unizar.urlshortener.core.Click
+import es.unizar.urlshortener.core.ClickRepositoryService
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.Counter
+import org.springframework.stereotype.Component
+import io.micrometer.core.instrument.Tags
+import io.micrometer.core.instrument.Metrics
+import io.micrometer.core.instrument.Gauge
+import io.micrometer.core.instrument.Meter
+import io.micrometer.core.instrument.Meter.Type
 
-/**
- * Given a content returns a String that contains metrics.
- */
+
+// /**
+//  * Given a content returns a String that contains metrics.
+//  */
 interface MetricsUseCase {
     //fun generateMetrics() : JsonContent
-    fun getMetric(content: String) : String
+    fun getOperatingSystemsCount(osName: String) : Int
+    fun registerOperatingSystemMetrics()
+    fun dumb() : String
+
 
 }
 
-data class JsonContent (
-    val result: Int,
-    val content: List<String> = listOf<String>()
-)
+// En la implementación MetricsUseCaseImpl
+class MetricsUseCaseImpl (
+    private val clickRepositoryService: ClickRepositoryService,
+    private val registry: MeterRegistry
+) : MetricsUseCase {
+    // private val operatingSystemsCounter: Counter = Counter.builder("operating_systems_count")
+    //     .description("Count of Different Operating Systems")
+    //     .register(registry)
 
-class  MetricsUseCaseImpl : MetricsUseCase {
-    /* override fun generateMetrics(): JsonContent {
-        val metricsUrl = "http://localhost:8080/api/metrics" // Reemplaza esto con tu URL real
+    // init {
+    //     registerOperatingSystemMetrics()
+    // }
+    // override fun findAllOperatingSystems(): List<String> {
+    //     return clickRepositoryService.findAllOperatingSystems().distinct()
+    // }
 
-        // Realiza la solicitud HTTP
-        val (_, response, result) = metricsUrl.httpGet()
-            .responseString()
 
-        // Verifica si la solicitud fue exitosa (código de estado 200)
-        if (response.statusCode == 200) {
-            // Devuelve el JSON como String
-            if(result.Success){
-                // Devuelve el JSON como String si la solicitud fue exitosa
-                return JsonContent(OK, result.get())
-            }
-            else if (result.Failure){
-                // Devuelve un mensaje de error si la solicitud no fue exitosa
-                return JsonContent(BAD_REQUEST)
+    override fun registerOperatingSystemMetrics() {
+        val operatingSystems = clickRepositoryService.findAllOperatingSystems()
+        println("Operating Systems: $operatingSystems")
+        val operatingSystemsDistincs = operatingSystems.distinct()
+        println("Operating Systems Distinct: $operatingSystemsDistincs")
 
-            }
+        for (osName in operatingSystemsDistincs) {
+            println("osName: $osName")
+            val count = clickRepositoryService.countClicksByOperatingSystem(osName)
+            println("count: $count")
+
+            registry.gauge(
+                "operating.systems.count",
+                Tags.of("os", osName),
+                count.toDouble()
+            )
         }
-        // Devuelve un mensaje de error si la solicitud no fue exitosa
-        return JsonContent(BAD_REQUEST)
     }
-    # Spring Datasource
-spring:
-  datasource:
-    url: jdbc:hsqldb:mem:.
-    username: sa
-    password:
-    driverClassName: org.hsqldb.jdbc.JDBCDriver
-  jpa:
-    open-in-view: false
-management:
-  endpoints:
-    web:
-      exposure:
-        include: "*"
-      base-path: /api
-      path-mapping:
-        metrics: /metrics
-     */
+    // override fun registerOperatingSystemsMetrics() {
+    //     val operatingSystems = clickRepositoryService.findAllOperatingSystems()
+    //     operatingSystems.forEach { osName ->
+    //         operatingSystemsCounter.tags("os", osName).increment()
+    //     }
+    // }
 
-    override fun getMetric(content: String): String {
-        return "hola"
+    override fun getOperatingSystemsCount(osName: String): Int {
+        return clickRepositoryService.countClicksByOperatingSystem(osName)
+    }
+
+    override fun dumb(): String {
+        return "dumb"
     }
 }
+
+
+
+// class MetricsUseCaseImpl(
+//     // private val registry: MeterRegistry
+//     private val clickRepository: ClickRepositoryService
+// ) : MetricsUseCase {
+//   // class MetricsController(registry: MeterRegistry) {
+
+//     // private val operatingSystemsCounter: Counter = Counter.builder("operating_systems_count")
+//     //     .tag("version", "v1")
+//     //     .description("Count of Different Operating Systems")
+//     //     .register(registry)
+
+//     // override fun registerOperatingSystem(osName: String) {
+//     //     operatingSystemsCounter.tags("os", osName).increment()
+//     // }
+
+//     override fun getOperatingSystemsCount(osName: String): Int {
+//         // Supongamos que ClickRepository tiene un método para contar clics por sistema operativo
+//         return clickRepository.countByOperatingSystem(osName)
+//     }
+// }

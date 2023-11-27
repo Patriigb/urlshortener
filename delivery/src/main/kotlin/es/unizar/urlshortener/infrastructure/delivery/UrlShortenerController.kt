@@ -48,6 +48,8 @@ import java.net.http.HttpResponse
 
 
 
+
+
 const val OK = 200
 const val BAD_REQUEST = 400
 
@@ -154,7 +156,9 @@ class UrlShortenerControllerImpl(
     val createQrUseCase: CreateQrUseCase,
     val shortUrlRepository: ShortUrlRepositoryService,
     val processCsvUseCase: ProcessCsvUseCase,
-    val controlador: QueueController
+    val controlador: QueueController,
+    val metricsUseCase: MetricsUseCase
+
 ) : UrlShortenerController {
 
     // val cola: BlockingQueue<suspend () -> Unit> = LinkedBlockingQueue()
@@ -236,6 +240,14 @@ class UrlShortenerControllerImpl(
         }
     }
 
+    // @Autowired
+    // private val metricsUseCase: MetricsUseCase = MetricsUseCaseImpl(metricsController.registry)
+
+    @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
+    fun scheduleMetricsRegistration() {
+        metricsUseCase.registerOperatingSystemMetrics()
+        println(metricsUseCase.dumb())
+    }
     @GetMapping("/api/metrics")
     override fun getMetrics(request: HttpServletRequest): ResponseEntity<Any> {
         val client = HttpClient.newBuilder().build()
@@ -267,6 +279,7 @@ class UrlShortenerControllerImpl(
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
     }
+
 
 
     @PostMapping("/api/link", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
