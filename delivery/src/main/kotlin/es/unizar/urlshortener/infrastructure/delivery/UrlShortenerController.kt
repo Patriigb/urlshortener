@@ -1,4 +1,4 @@
-@file:Suppress("LongParameterList", "TooGenericExceptionCaught")
+@file:Suppress("LongParameterList", "TooGenericExceptionCaught", "TooManyFunctions")
 
 package es.unizar.urlshortener.infrastructure.delivery
 
@@ -44,6 +44,19 @@ import org.springframework.stereotype.Component
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Configuration
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
+import org.springframework.web.socket.config.annotation.StompEndpointRegistry
+import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
+import org.springframework.web.socket.messaging.SessionSubscribeEvent
+import org.springframework.context.event.EventListener
+import org.springframework.messaging.handler.annotation.MessageMapping
+import org.springframework.messaging.simp.annotation.SubscribeMapping
+import org.springframework.messaging.handler.annotation.SendTo
+import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.messaging.simp.config.MessageBrokerRegistry
+import org.springframework.messaging.simp.user.SimpUserRegistry
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor
+//import jakarta.websocket.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
@@ -156,6 +169,20 @@ class InterstitialAdsConfig {
     var enabled: Boolean = false
 }
 
+@Configuration
+@EnableWebSocketMessageBroker
+class WebSocketConfig : WebSocketMessageBrokerConfigurer {
+    // la api /api/fast-bulk es la única que va a usar el websocket
+    override fun configureMessageBroker(config: MessageBrokerRegistry) {
+        config.enableSimpleBroker("/topic")
+        config.setApplicationDestinationPrefixes("/topic")
+    }
+
+    override fun registerStompEndpoints(registry: StompEndpointRegistry) {
+        registry.addEndpoint("/api/fast-bulk").withSockJS()
+    }
+}
+
 /**
  * The implementation of the controller.
  *
@@ -180,6 +207,9 @@ class UrlShortenerControllerImpl(
     private lateinit var interstitialAdsConfig: InterstitialAdsConfig
 
     private val rateLimiterSum = RateLimiter.create(RATE)
+
+    @Autowired
+    private lateinit var messagingTemplate: SimpMessagingTemplate
 
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> {
@@ -390,6 +420,29 @@ class UrlShortenerControllerImpl(
         csvWriter.close()
         return ResponseEntity(resultCsv.toString(), h, HttpStatus.CREATED)
     }
+
+
+    /**
+     *  Desarrollar un segunda API en /api/fast-bulk para las peticiones
+     *  asíncronas que aplicará los criterios de escalabilidad de la sección
+     *  4. El diseño de esta segunda API es libre. Debe diseñarse de tal
+     *  forma que permita que el cliente reciba la información lo más
+     *  rápidamente posible (SimpMessagingTemplate). 
+     */
+    @MessageMapping("/csv1")
+    @SendTo("/topic/csv1")
+    fun fastBulk(message: String) {
+        messagingTemplate.convertAndSend("/topic/csv1", "prueba" + message)
+    }
+
+    // Al suscribirse a /topic/csv, el cliente recibe el mensaje "Escribe las urls"
+    @SubscribeMapping("/csv")
+    fun subscribeToCsv(): String {
+        val msg = "Escribe las urls"
+        return msg
+    }
+
+
 
     /**
      * Creates a short url from a [uri].

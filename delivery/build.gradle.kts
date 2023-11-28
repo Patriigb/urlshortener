@@ -16,6 +16,8 @@ dependencies {
     implementation("com.opencsv:opencsv:5.6")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
 
+    implementation("org.springframework.boot:spring-boot-starter-websocket")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.mockito.kotlin:mockito-kotlin:${Version.MOCKITO}")
 

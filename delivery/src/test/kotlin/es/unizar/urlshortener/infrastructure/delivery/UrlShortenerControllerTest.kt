@@ -28,6 +28,7 @@ import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers
+import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import java.io.StringWriter
 import java.net.URI
@@ -64,6 +65,9 @@ class UrlShortenerControllerTest {
 
     @MockBean
     private lateinit var interstitialAdsConfig: InterstitialAdsConfig
+
+    @MockBean
+    private lateinit var messagingTemplate: SimpMessagingTemplate
 
     @MockBean
     private lateinit var metricsUseCase: MetricsUseCase
