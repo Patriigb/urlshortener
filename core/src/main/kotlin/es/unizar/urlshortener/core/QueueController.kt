@@ -52,7 +52,7 @@ class QueueControllerImpl : QueueController {
         insertarComando(nombre,funcion)
     }
 
-    @Scheduled(initialDelay = 20, fixedRate = 20, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(initialDelay = 100, fixedRate = 100)
     override fun consumerMethod() {
         CoroutineScope(Dispatchers.IO).launch {
             val command = takeFromQueue()
@@ -60,7 +60,7 @@ class QueueControllerImpl : QueueController {
         }
     }
 
-    @Scheduled(initialDelay = 20, fixedRate = 20, timeUnit = TimeUnit.SECONDS)
+    @Scheduled(initialDelay = 100, fixedRate = 100)
     override fun consumerMethod2() {
         CoroutineScope(Dispatchers.IO).launch {
             val command = takeFromQueue()

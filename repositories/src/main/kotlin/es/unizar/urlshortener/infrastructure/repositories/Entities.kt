@@ -31,7 +31,10 @@ class ClickEntity(
 @Table(name = "shorturl")
 @Suppress("LongParameterList")
 class ShortUrlEntity(
-    @Id
+    @Id @GeneratedValue(strategy = GenerationType.AUTO) 
+    val id: Long? = null,
+
+    @Column(unique = true)
     val hash: String,
     val target: String,
     val sponsor: String?,

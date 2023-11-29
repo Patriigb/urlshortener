@@ -29,17 +29,20 @@ class CreateShortUrlUseCaseImpl(
     override fun create(url: String, data: ShortUrlProperties): ShortUrl {
         if (validatorService.isValid(url)) {
            // var qrImage: ByteArray? = null
-            val id: String = hashService.hasUrl(url)
+            val hash: String = hashService.hasUrl(url)
+            val id = shortUrlRepository.findByKey(hash)?.id
+
             val su = ShortUrl(
-               hash = id,
-               redirection = Redirection(target = url),
-               properties = ShortUrlProperties(
-                   safe = data.safe,
-                   ip = data.ip,
-                   sponsor = data.sponsor,
-                   qr = data.qr
-               )
-               )
+                id = id,
+                hash = hash,
+                redirection = Redirection(target = url),
+                properties = ShortUrlProperties(
+                    safe = data.safe,
+                    ip = data.ip,
+                    sponsor = data.sponsor,
+                    qr = data.qr
+                )
+            )
             shortUrlRepository.save(su)
         
             return su

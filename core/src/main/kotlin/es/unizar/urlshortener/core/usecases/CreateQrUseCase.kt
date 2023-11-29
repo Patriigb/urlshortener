@@ -43,7 +43,10 @@ class CreateQrUseCaseImpl(
         val byteArrayOutputStream = ByteArrayOutputStream()
         ImageIO.write(bufferedImage, "png", byteArrayOutputStream)
 
+        val id = shortUrlRepository.findByKey(su.hash)?.id
+
         val newSu = ShortUrl(
+            id = id,
             hash = su.hash,
             redirection = su.redirection,
             properties = ShortUrlProperties(

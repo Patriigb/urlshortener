@@ -7,7 +7,7 @@ import org.springframework.data.jpa.repository.JpaRepository
  *
  * **Note**: Spring Boot is able to discover this [JpaRepository] without further configuration.
  */
-interface ShortUrlEntityRepository : JpaRepository<ShortUrlEntity, String> {
+interface ShortUrlEntityRepository : JpaRepository<ShortUrlEntity, Long> {
     fun findByHash(hash: String): ShortUrlEntity?
 }
 

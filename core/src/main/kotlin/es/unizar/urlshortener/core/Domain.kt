@@ -16,6 +16,7 @@ data class Click(
  * and a local short url identified by [hash].
  */
 data class ShortUrl(
+    val id: Long?,
     val hash: String,
     val redirection: Redirection,
     val properties: ShortUrlProperties = ShortUrlProperties(),
