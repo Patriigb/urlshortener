@@ -41,19 +41,7 @@ class CreateShortUrlUseCaseImpl(
                )
                )
             shortUrlRepository.save(su)
-            // if(data.qr == true){
-            //     val urlQr = newUrl.toString() + "/qr"
-            //     println("url : " + urlQr)
-            //     val miFuncion: suspend () -> Unit = {
-            //         createQrUseCase.generateQRCode(urlQr, su)
-            //     }
-            //     controlador.producerMethod(miFuncion)
-                
-            //     controlador.consumerMethod()
-            //     // qrImage = createQrUseCase.generateQRCode(urlQr)
-            // } else {
-            //     // No se genera el qr
-            // }
+        
             return su
         } else {
             throw InvalidUrlException(url)

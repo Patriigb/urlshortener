@@ -70,10 +70,6 @@ import java.net.http.HttpResponse
 
 const val OK = 200
 const val BAD_REQUEST = 400
-const val TEMPORARY_REDIRECT = 307
-const val TOO_MANY_REQUESTS = 429
-const val SEC = 5
-const val RATE = 20.0
 
 /**
  * The specification of the controller.
@@ -107,8 +103,8 @@ interface UrlShortenerController {
     /**
      * Gets the QR code of a short url identified by its [id].
      */
-    fun getQr(id: String, request: HttpServletRequest): ResponseEntity<ByteArray>
-
+    fun getQr(id: String, request: HttpServletRequest): ResponseEntity<Any>
+    
     /**
      * Gets the metrics of the system.
      */
@@ -163,11 +159,6 @@ data class ShortInfo(
     val errorMessage: String
 )
 
-@Configuration
-@ConfigurationProperties("interstitial-ads")
-class InterstitialAdsConfig {
-    var enabled: Boolean = false
-}
 
 @Configuration
 @EnableWebSocketMessageBroker
@@ -204,75 +195,48 @@ class UrlShortenerControllerImpl(
 ) : UrlShortenerController {
 
     @Autowired
-    private lateinit var interstitialAdsConfig: InterstitialAdsConfig
-
-    private val rateLimiterSum = RateLimiter.create(RATE)
-
-    @Autowired
     private lateinit var messagingTemplate: SimpMessagingTemplate
 
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> {
             println("el id es: " + id)
-            if (!rateLimiterSum.tryAcquire()) {
-                // No se adquirió el permiso, demasiadas solicitudes
-                val retryAfterSeconds = SEC // Ajusta este valor según tus necesidades
-                val headers = HttpHeaders()
-                headers.set(HttpHeaders.RETRY_AFTER, retryAfterSeconds.toString())
-                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(headers).build()
-            }
-
+            
             val datos = logClickUseCase.getSumary(id)
 
             val response = Sumary(info = datos)
             return ResponseEntity<Sumary>(response, HttpStatus.OK)
     }
 
-    private val rateLimiterRed = RateLimiter.create(RATE)
-    
+
     @GetMapping("/{id:(?!api|index).*}")
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> {
-            // Intenta adquirir un permiso del RateLimiter
-            if (!rateLimiterRed.tryAcquire()) {
-                // No se adquirió el permiso, demasiadas solicitudes
-                val retryAfterSeconds = SEC // Ajusta este valor según tus necesidades
-                val headers = HttpHeaders()
-                headers.set(HttpHeaders.RETRY_AFTER, retryAfterSeconds.toString())
-                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS).headers(headers).build()
-            }
-
+           
             val redirection = redirectUseCase.redirectTo(id)
         
-            val hasInterstitial = interstitialAdsConfig.enabled
-
-            val statusCode = if (!hasInterstitial) {
-                // No hay publicidad intersticial
-                HttpStatus.TEMPORARY_REDIRECT
-            } else {
-                // Hay publicidad intersticial
-                HttpStatus.OK
-            }
-
             val logFunction: suspend () -> Unit = {
                 logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr), request.getHeader("User-Agent"))
             }
             controlador.producerMethod("logClick", logFunction)
 
             val headers = HttpHeaders()
+            headers.location = URI.create(redirection.target)
 
-            if (!hasInterstitial) {
-                // No hay publicidad intersticial, se agrega la cabecera Location para redirección
-                headers.location = URI.create(redirection.target)
-            }
-
-            return ResponseEntity<Unit>(headers, statusCode)
+            return ResponseEntity<Unit>(headers, HttpStatus.valueOf(redirection.mode))
     }
 
     @GetMapping("/{id}/qr")
-    override fun getQr(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<ByteArray> {
+    override fun getQr(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<Any> {
         // Verificar si el id existe en la base de datos
         val shortUrl = shortUrlRepository.findByKey(id)
         if (shortUrl != null && shortUrl.properties.qr == true) {
+
+            if(shortUrl.properties.qrImage == null){
+
+                val errorResponse = mapOf("error" to "Imagen QR no disponible. Intentalo más tarde.")
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .header("Retry-After", "5")
+                    .body(errorResponse)
+            }
             
             // Devolver imagen con tipo de contenido correcto
             return ResponseEntity.ok().header("Content-Type", "image/png").body(shortUrl.properties.qrImage)

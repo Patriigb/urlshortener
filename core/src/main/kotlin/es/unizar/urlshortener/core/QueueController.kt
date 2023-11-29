@@ -4,6 +4,8 @@ import java.util.concurrent.BlockingQueue
 import kotlinx.coroutines.CoroutineScope
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.ConcurrentLinkedQueue
+import java.util.concurrent.Executors
+import java.util.concurrent.TimeUnit
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
@@ -26,8 +28,7 @@ interface QueueController {
     fun consumerMethod2()
 }
 
-@EnableScheduling
-@Component
+
 class QueueControllerImpl : QueueController {
     val cola: BlockingQueue<Pair<String, suspend () -> Unit>> = LinkedBlockingQueue()
 
@@ -39,18 +40,10 @@ class QueueControllerImpl : QueueController {
 
     
     override fun takeFromQueue() : suspend () -> Unit {
-        // var comando: suspend () -> Unit? = null
-        // try {
-           // while (true) {
-                // Bloquea hasta que haya un elemento en la cola
+        
         val (tag, comando) = cola.take()
         println("Consumidor ejecutando comando: $tag")
 
-                // Aquí puedes agregar la lógica para procesar el comando según tus necesidades
-                // }
-        // } catch (e: InterruptedException) {
-        //         Thread.currentThread().interrupt()
-        // }
         return comando
     }
 
@@ -59,7 +52,7 @@ class QueueControllerImpl : QueueController {
         insertarComando(nombre,funcion)
     }
 
-    @Scheduled(fixedRate = 100)
+    @Scheduled(initialDelay = 20, fixedRate = 20, timeUnit = TimeUnit.SECONDS)
     override fun consumerMethod() {
         CoroutineScope(Dispatchers.IO).launch {
             val command = takeFromQueue()
@@ -67,7 +60,7 @@ class QueueControllerImpl : QueueController {
         }
     }
 
-    @Scheduled(fixedRate = 101)
+    @Scheduled(initialDelay = 20, fixedRate = 20, timeUnit = TimeUnit.SECONDS)
     override fun consumerMethod2() {
         CoroutineScope(Dispatchers.IO).launch {
             val command = takeFromQueue()
