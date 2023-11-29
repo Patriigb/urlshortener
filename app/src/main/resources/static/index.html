@@ -9,15 +9,16 @@
     <script src="webjars/jquery/3.6.1/jquery.min.js" type="text/javascript"></script>
     <script src="webjars/bootstrap/3.4.0/js/bootstrap.min.js"
             type="text/javascript"></script>
-    <script src="js/app.js" type="text/javascript">
-    </script>
+    <script src="/webjars/sockjs-client/1.5.1/sockjs.min.js"></script>
+    <script src="/webjars/stomp-websocket/2.3.3/stomp.min.js"></script>
+    <script src="js/app.js" type="text/javascript"></script>
 
 </head>
 <style>
     .button-container {
         position: fixed;
         left: 50%;
-        top: 50%;
+        top: 50%;>
         transform: translate(-50%, -50%);
         text-align: left; /* Para alinear el texto a la izquierda dentro del contenedor */
     }
@@ -67,6 +68,23 @@
             <form action="" class="col-lg-12" id="getMetricsForm" role="form">
                 <button class="btn btn-lg btn-primary" type="button" id="getMetrics">Ver metricas</button>
             </form>
+            <!-- WEBSOCKET -->
+            <button class="btn btn-lg btn-primary" type="button" id="connectWebSocket">Connect to WebSocket</button>
+            <div id="websocketFormContainer" style="display: none;">
+                <form action="" class="col-lg-12" id="websocketForm" role="form">
+                    <div class="input-group input-group-lg col-sm-offset-4 col-sm-4">
+                        <input class="center-block form-control input-lg" name="urls"
+                               placeholder="Enter URLs (comma-separated)" title="Enter URLs" type="text" id="urlsInput">
+                    </div>
+                    <div>
+                        <button class="btn btn-lg btn-primary" type="submit">Send URLs to WebSocket</button>
+                    </div>
+                </form>
+                <div id="websocketResponseContainer">
+                    <h4>WebSocket Response:</h4>
+                    <div id="websocketResponse"></div>
+                </div>
+            </div>
         </div>
     </div>
     <div class="row">

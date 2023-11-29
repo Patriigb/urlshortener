@@ -2,6 +2,8 @@ $(document).ready(
     function () {
         var qrDir = null
         var dir = null
+        var stompClient = null
+
         $("#shortener").submit(
             
             function (event) {
@@ -253,5 +255,48 @@ $(document).ready(
                  });
             });
         }
+
+        $("#connectWebSocket").click(function () {
+            // Mostrar el formulario de WebSocket y ocultar el botón de conexión
+            $("#websocketFormContainer").show();
+            $(this).hide();
+
+            // Establecer la conexión WebSocket
+            connect();
+        });
+
+        $("#websocketForm").submit(function (event) {
+            event.preventDefault();
+
+            // Obtener el valor de la caja de texto de las URLs
+            var urlsInput = $("#urlsInput");
+            var urlsValue = urlsInput.val().split(/\s+/).map(url => url.trim());
+
+            // Enviar las URLs al servidor a través del WebSocket
+            sendUrlsToServer(urlsValue);
+        });
+
+        function connect() {
+            var socket = new SockJS('/api/fast-bulk');
+            stompClient = Stomp.over(socket);
+
+            stompClient.connect({}, function (frame) {
+                console.log('Conectado: ' + frame);
+
+                // Suscribirse al canal '/topic/csv' para recibir respuestas del servidor
+                stompClient.subscribe('/topic/csv', function (response) {
+                    // Manejar la respuesta del servidor
+                    var websocketResponse = $("#websocketResponse");
+                    websocketResponse.append("<p>" + response.body + "</p>");
+                });
+            });
+        }
+
+        function sendUrlsToServer(urls) {
+            // Enviar las URLs al servidor a través del WebSocket
+            stompClient.send("/topic/csv", {}, JSON.stringify(urls));
+        }
+
+
     }
 );

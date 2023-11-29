@@ -64,9 +64,6 @@ class UrlShortenerControllerTest {
     private lateinit var queueController: QueueController
 
     @MockBean
-    private lateinit var interstitialAdsConfig: InterstitialAdsConfig
-
-    @MockBean
     private lateinit var messagingTemplate: SimpMessagingTemplate
 
     @MockBean

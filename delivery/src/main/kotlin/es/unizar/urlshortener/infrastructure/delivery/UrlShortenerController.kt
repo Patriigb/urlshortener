@@ -1,4 +1,4 @@
-@file:Suppress("LongParameterList", "TooGenericExceptionCaught", "TooManyFunctions")
+@file:Suppress("LongParameterList", "TooGenericExceptionCaught", "TooManyFunctions", "ReturnCount")
 
 package es.unizar.urlshortener.infrastructure.delivery
 
@@ -393,17 +393,17 @@ class UrlShortenerControllerImpl(
      *  forma que permita que el cliente reciba la información lo más
      *  rápidamente posible (SimpMessagingTemplate). 
      */
-    @MessageMapping("/csv1")
-    @SendTo("/topic/csv1")
-    fun fastBulk(message: String) {
-        messagingTemplate.convertAndSend("/topic/csv1", "prueba" + message)
+    @MessageMapping("/csv")
+    @SendTo("/topic/csv")
+    fun fastBulk(message: List<String>) {
+        messagingTemplate.convertAndSend("/topic/csv", message)
     }
 
     // Al suscribirse a /topic/csv, el cliente recibe el mensaje "Escribe las urls"
     @SubscribeMapping("/csv")
-    fun subscribeToCsv(): String {
-        val msg = "Escribe las urls"
-        return msg
+    fun subscribeToCsv() {
+        val a = "Hola!"
+        messagingTemplate.convertAndSend("/topic/csv", a)
     }
 
 
