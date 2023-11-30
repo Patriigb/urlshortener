@@ -115,7 +115,7 @@ class UrlShortenerControllerTest {
         given(processCsvUseCase.checkCsvContent("URI\nhttp://example.com"))
             .willReturn(CsvContent(0, listOf("URI", "http://example.com")))
         given(createShortUrlUseCase.create("http://example.com", ShortUrlProperties(ip = "127.0.0.1")))
-            .willReturn(ShortUrl("f684a3c4", Redirection("http://example.com")))
+            .willReturn(ShortUrl(null,"f684a3c4", Redirection("http://example.com")))
 
         val response = mockMvc.perform(
             MockMvcRequestBuilders.multipart("/api/bulk")
@@ -180,15 +180,38 @@ class UrlShortenerControllerTest {
     }
 
     @Test
-    fun `getQr returns Ok if key exists`() {
+    fun `getQr returns Ok if key exists and qrImage is available`() {
 
         given(shortUrlRepositoryService.findByKey("f684a3c4")).willReturn(ShortUrl(
-            "f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true)
+            null,"f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true, 
+            qrImage = "secuenciaDeBytes".toByteArray())
         ))
        
         mockMvc.perform(get("/{id}/qr", "f684a3c4"))
             .andDo(print())
             .andExpect(status().isOk)
+            .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"))
+            .andExpect(content().bytes("secuenciaDeBytes".toByteArray()))
+
+        verify(shortUrlRepositoryService).findByKey("f684a3c4")
+    
+    }
+
+
+    @Test
+    fun `getQr returns Retry_after if key exists and qrImage is not available`() {
+
+        given(shortUrlRepositoryService.findByKey("f684a3c4")).willReturn(ShortUrl(
+            null,"f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true)
+        ))
+
+        val errorResponse = "Imagen QR no disponible. Intentalo más tarde."
+       
+        mockMvc.perform(get("/{id}/qr", "f684a3c4"))
+            .andDo(print())
+            .andExpect(status().isBadRequest)
+            .andExpect(header().string(HttpHeaders.RETRY_AFTER, "5"))
+            .andExpect(jsonPath("$.error").value(errorResponse))
 
         verify(shortUrlRepositoryService).findByKey("f684a3c4")
     
@@ -202,7 +225,7 @@ class UrlShortenerControllerTest {
             .andExpect(status().isNotFound)
 
         verify(createQrUseCase, never()).generateQRCode("http://localhost/key", 
-        ShortUrl("key", Redirection("http://example.com/")))
+        ShortUrl(null,"key", Redirection("http://example.com/")))
     }
 
     @Test
@@ -212,7 +235,7 @@ class UrlShortenerControllerTest {
                 url = "http://example.com/",
                 data = ShortUrlProperties(ip = "127.0.0.1", qr = true)
             )
-        ).willReturn(ShortUrl("f684a3c4", Redirection("http://example.com/")))
+        ).willReturn(ShortUrl(null,"f684a3c4", Redirection("http://example.com/")))
 
         mockMvc.perform(
             post("/api/link")
@@ -234,7 +257,7 @@ class UrlShortenerControllerTest {
                 url = "http://example.com/",
                 data = ShortUrlProperties(ip = "127.0.0.1")
             )
-        ).willReturn(ShortUrl("f684a3c4", Redirection("http://example.com/")))
+        ).willReturn(ShortUrl(null,"f684a3c4", Redirection("http://example.com/")))
 
         mockMvc.perform(
             post("/api/link")

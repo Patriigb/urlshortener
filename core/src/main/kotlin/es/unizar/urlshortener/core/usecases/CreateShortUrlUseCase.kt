@@ -32,6 +32,13 @@ class CreateShortUrlUseCaseImpl(
             val hash: String = hashService.hasUrl(url)
             val id = shortUrlRepository.findByKey(hash)?.id
 
+
+            var qr = shortUrlRepository.findByKey(hash)?.properties?.qr ?: false
+            var qrImage = shortUrlRepository.findByKey(hash)?.properties?.qrImage
+
+            var dataQr = data.qr ?: false
+            qr = qr or dataQr
+
             val su = ShortUrl(
                 id = id,
                 hash = hash,
@@ -40,7 +47,8 @@ class CreateShortUrlUseCaseImpl(
                     safe = data.safe,
                     ip = data.ip,
                     sponsor = data.sponsor,
-                    qr = data.qr
+                    qr = qr,
+                    qrImage = qrImage
                 )
             )
             shortUrlRepository.save(su)

@@ -44,7 +44,7 @@ class ClickRepositoryServiceImpl(
 class ShortUrlRepositoryServiceImpl(
     private val shortUrlEntityRepository: ShortUrlEntityRepository
 ) : ShortUrlRepositoryService {
-    override fun findByKey(id: String): ShortUrl? = shortUrlEntityRepository.findByHash(id)?.toDomain()
+    override fun findByKey(hash: String): ShortUrl? = shortUrlEntityRepository.findByHash(hash)?.toDomain()
 
     override fun save(su: ShortUrl): ShortUrl = shortUrlEntityRepository.save(su.toEntity()).toDomain()
 }
