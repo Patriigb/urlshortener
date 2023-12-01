@@ -59,6 +59,11 @@ import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 //import jakarta.websocket.*
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
+import org.springframework.http.server.ServerHttpRequest
+import org.springframework.http.server.ServerHttpResponse
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor
+import org.springframework.web.socket.WebSocketHandler
+import org.springframework.web.socket.server.HandshakeInterceptor
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -81,7 +86,7 @@ interface UrlShortenerController {
      *
      * **Note**: Delivery of use cases [RedirectUseCase] and [LogClickUseCase].
      */
-    fun redirectTo(id: String, request: HttpServletRequest): ResponseEntity<Unit>
+    fun redirectTo(id: String, request: HttpServletRequest?): ResponseEntity<Unit>
 
     /**
      * Creates a short url from details provided in [data].
@@ -150,6 +155,17 @@ data class CsvDataIn(
     val sponsor: String? = null
 )
 
+
+data class ServerMessage(
+    val type: String? = null,
+    val body: String? = null
+)
+
+data class WsData(
+    val urls: List<String>,
+    val generateQr: Boolean
+)
+
 /**
  * Data returned after the creation of a short url from a csv file.
  */
@@ -159,18 +175,40 @@ data class ShortInfo(
     val errorMessage: String
 )
 
+class RemoteAddressHandshakeInterceptor : HandshakeInterceptor {
+
+    override fun beforeHandshake(
+        request: ServerHttpRequest,
+        response: ServerHttpResponse,
+        wsHandler: WebSocketHandler,
+        attributes: MutableMap<String, Any>
+    ): Boolean {
+        // Obtener la dirección remota del cliente desde la solicitud y almacenarla como un atributo de la sesión
+        attributes["remoteAddr"] = request.remoteAddress.address?.hostAddress ?: "unknown"
+        return true
+    }
+    override fun afterHandshake(
+        request: ServerHttpRequest,
+        response: ServerHttpResponse,
+        wsHandler: WebSocketHandler,
+        exception: Exception?
+    ) {
+        println("WebSocket handshake completed successfully.")
+    }
+}
 
 @Configuration
 @EnableWebSocketMessageBroker
 class WebSocketConfig : WebSocketMessageBrokerConfigurer {
-    // la api /api/fast-bulk es la única que va a usar el websocket
     override fun configureMessageBroker(config: MessageBrokerRegistry) {
         config.enableSimpleBroker("/topic")
         config.setApplicationDestinationPrefixes("/topic")
     }
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
-        registry.addEndpoint("/api/fast-bulk").withSockJS()
+        registry.addEndpoint("/api/fast-bulk")
+            .withSockJS()
+            .setInterceptors(RemoteAddressHandshakeInterceptor())
     }
 }
 
@@ -199,7 +237,7 @@ class UrlShortenerControllerImpl(
 
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> {
-            println("el id es: " + id)
+            println("el id es: $id")
             
             val datos = logClickUseCase.getSumary(id)
 
@@ -209,12 +247,13 @@ class UrlShortenerControllerImpl(
 
 
     @GetMapping("/{id:(?!api|index).*}")
-    override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> {
-           
+    override fun redirectTo(@PathVariable id: String, request: HttpServletRequest?): ResponseEntity<Unit> {
             val redirection = redirectUseCase.redirectTo(id)
         
             val logFunction: suspend () -> Unit = {
-                logClickUseCase.logClick(id, ClickProperties(ip = request.remoteAddr), request.getHeader("User-Agent"))
+                logClickUseCase.logClick(
+                    id, ClickProperties(ip = request?.remoteAddr), request?.getHeader("User-Agent")
+                )
             }
             controlador.producerMethod("logClick", logFunction)
 
@@ -257,16 +296,15 @@ class UrlShortenerControllerImpl(
     @GetMapping("/api/metrics")
     override fun getMetrics(request: HttpServletRequest): ResponseEntity<Any> {
         val client = HttpClient.newBuilder().build()
-        val request = HttpRequest.newBuilder()
+        val httpRequest = HttpRequest.newBuilder()
             .uri(URI.create("http://localhost:8080/actuator/metrics"))
             .build();
 
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        val response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
         if(response.statusCode() == OK){
             return ResponseEntity.ok().header("Content-Type", "application/json")
                 .body(response.body())
         }
-        // SI NO LO ENCUENTRA ES BAD REQUEST?
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
 
     }
@@ -305,7 +343,7 @@ class UrlShortenerControllerImpl(
 
             // url del qr más /qr
             val response = if (data.generateQr == true) {
-                val urlQr = url.toString() + "/qr"
+                val urlQr = "$url/qr"
                 // comprobar que headersSumary no es null
                 val miFuncion: suspend () -> Unit = {
                     createQrUseCase.generateQRCode(urlQr, it)
@@ -336,103 +374,135 @@ class UrlShortenerControllerImpl(
     @PostMapping("/api/bulk", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     override fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String> {
         val csvContent = data.file.bytes.toString(Charsets.UTF_8)
-        
         val result = processCsvUseCase.checkCsvContent(csvContent)
+
         if (result.result == BAD_REQUEST || result.result == OK) {
             return ResponseEntity(HttpStatus.valueOf(result.result))
         }
 
         val checkQr = result.result == 1
+        var urlQr = ""
         val lines = CSVReader(StringReader(csvContent)).readAll().map { it.map(String::trim) }
 
         val h = HttpHeaders().apply { contentType = MediaType.parseMediaType("text/csv") }
-
         val resultCsv = StringWriter()
         val csvWriter = CSVWriter(resultCsv)
-        csvWriter.writeNext(arrayOf("URI", "URI_Recortada", "Mensaje"), false)
-
         var firstUri = true
+
         for (i in 1 until lines.size) {
-            var line = lines[i]
+            val line = lines[i]
             val uri = line[0]
             val qr = if (checkQr && line.size > 1 && line[1].isNotBlank()) line[1] else null
-            
-            val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, data, request)
-            if (firstUri) h.location = shortenedUri
-            firstUri = false
-            
-            if (checkQr) { 
-                // generar el qr
-                var urlQr = ""
-                if (errorMessage.isBlank() && qr != null) {
-                    urlQr = "$shortenedUri/qr"
-                    createShortUrlUseCase.create(
-                        url = originalUri,
-                        data = ShortUrlProperties(
-                            ip = request.remoteAddr,
-                            qr = true
-                        )
-                    )
+
+            val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, data, request, false, null)
+            if (firstUri) {
+                h.location = shortenedUri
+                if (checkQr) {
+                    csvWriter.writeNext(arrayOf("URI", "URI_Recortada", "URI_QR", "Mensaje"), false)
+                } else {
+                    csvWriter.writeNext(arrayOf("URI", "URI_Recortada", "Mensaje"), false)
                 }
-                
+                firstUri = false
+            }
+
+            if (errorMessage.isBlank()) {
+                val shortUrl = createShortUrlUseCase.create(
+                    url = originalUri,
+                    data = ShortUrlProperties(
+                        ip = request.remoteAddr,
+                        qr = qr != null
+                    )
+                )
+                if (checkQr && qr != null) {
+                        urlQr = "$shortenedUri/qr"
+                        val miFuncion: suspend () -> Unit = { createQrUseCase.generateQRCode(urlQr, shortUrl) }
+                        controlador.producerMethod("generateQRCode", miFuncion)
+                }
+            }
+            if (checkQr) {
                 csvWriter.writeNext(arrayOf(originalUri, "$shortenedUri", urlQr, errorMessage), false)
             } else {
                 csvWriter.writeNext(arrayOf(originalUri, "$shortenedUri", errorMessage), false)
             }
         }
-
         csvWriter.close()
         return ResponseEntity(resultCsv.toString(), h, HttpStatus.CREATED)
     }
 
-
-    /**
-     *  Desarrollar un segunda API en /api/fast-bulk para las peticiones
-     *  asíncronas que aplicará los criterios de escalabilidad de la sección
-     *  4. El diseño de esta segunda API es libre. Debe diseñarse de tal
-     *  forma que permita que el cliente reciba la información lo más
-     *  rápidamente posible (SimpMessagingTemplate). 
-     */
     @MessageMapping("/csv")
     @SendTo("/topic/csv")
-    fun fastBulk(message: List<String>) {
-        messagingTemplate.convertAndSend("/topic/csv", message)
+    fun fastBulk(data: WsData, accessor: SimpMessageHeaderAccessor) {
+        val uris = data.urls
+        val checkQr = data.generateQr
+        val remoteAddr = accessor.sessionAttributes?.get("remoteAddr").toString()
+
+        for (uri in uris) {
+            var msg: String
+            val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, null, null, true, remoteAddr)
+
+            if (errorMessage.isBlank()) {
+                val shortUrl = createShortUrlUseCase.create(
+                    url = originalUri,
+                    data = ShortUrlProperties(
+                        ip = remoteAddr,
+                        qr = checkQr
+                    )
+                )
+
+                msg = if (checkQr) {
+                    val urlQr = "$shortenedUri/qr"
+                    val miFuncion: suspend () -> Unit = { createQrUseCase.generateQRCode(urlQr, shortUrl) }
+                    controlador.producerMethod("generateQRCode", miFuncion)
+                    "$originalUri >>> $shortenedUri >>> $urlQr"
+                } else {
+                    "$originalUri >>> $shortenedUri"
+                }
+
+                messagingTemplate.convertAndSend(
+                    "/topic/csv",
+                    ServerMessage("server",msg))
+
+            } else {
+                messagingTemplate.convertAndSend(
+                    "/topic/csv",
+                    ServerMessage("server","Ha ocurrido un error: $errorMessage"))
+            }
+        }
     }
 
-    // Al suscribirse a /topic/csv, el cliente recibe el mensaje "Escribe las urls"
     @SubscribeMapping("/csv")
     fun subscribeToCsv() {
-        val a = "Hola!"
-        messagingTemplate.convertAndSend("/topic/csv", a)
+        val message = ServerMessage("server","¡Hola! Escribe las urls separadas por espacios.")
+        messagingTemplate.convertAndSend("/topic/csv", message)
     }
-
-
 
     /**
      * Creates a short url from a [uri].
      * @return a [ShortInfo] with the original uri, the shortened uri and an error message if any.
      */
-    private fun shortUrl( uri: String, data: CsvDataIn, request: HttpServletRequest): ShortInfo{
+    private fun shortUrl( uri: String, data: CsvDataIn?, request: HttpServletRequest?,
+                          isWs: Boolean, remoteAddr: String?): ShortInfo{
         try {
-            val shortUrlDataIn = ShortUrlDataIn(uri, data.sponsor, false)
+            val shortUrlDataIn = ShortUrlDataIn(uri, data?.sponsor, false)
+            val ip = if (isWs) remoteAddr else request?.remoteAddr
+
             val response = createShortUrlUseCase.create(
                 url = shortUrlDataIn.url,
                 data = ShortUrlProperties(
-                    ip = request.remoteAddr,
+                    ip = ip,
                     sponsor = shortUrlDataIn.sponsor
                 )
             )
 
-            val originalUri = uri
-            val shortenedUri = linkTo<UrlShortenerControllerImpl> { redirectTo(response.hash, request) }.toUri()
+            val shortenedUri = URI("http://localhost:8080").resolve(
+                linkTo<UrlShortenerControllerImpl> { redirectTo(response.hash, request) }.toUri())
             val errorMessage = if (response.properties.safe) "" else "ERROR"
 
-            return ShortInfo(originalUri, shortenedUri, errorMessage)
+            return ShortInfo(uri, shortenedUri, errorMessage)
         } catch (e: Exception) {
-            val originalUri = uri
             val shortenedUri = URI("")
             val errorMessage = e.message ?: "ERROR"
-            return ShortInfo(originalUri, shortenedUri, errorMessage)
+            return ShortInfo(uri, shortenedUri, errorMessage)
         }
 
     }

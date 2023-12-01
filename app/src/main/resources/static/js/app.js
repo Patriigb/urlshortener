@@ -272,8 +272,10 @@ $(document).ready(
             var urlsInput = $("#urlsInput");
             var urlsValue = urlsInput.val().split(/\s+/).map(url => url.trim());
 
+            var generateQRws = $("#qrWs").is(":checked")
+
             // Enviar las URLs al servidor a través del WebSocket
-            sendUrlsToServer(urlsValue);
+            sendUrlsToServer(urlsValue, generateQRws);
         });
 
         function connect() {
@@ -285,16 +287,24 @@ $(document).ready(
 
                 // Suscribirse al canal '/topic/csv' para recibir respuestas del servidor
                 stompClient.subscribe('/topic/csv', function (response) {
+                    var message = JSON.parse(response.body);
+
                     // Manejar la respuesta del servidor
-                    var websocketResponse = $("#websocketResponse");
-                    websocketResponse.append("<p>" + response.body + "</p>");
+                    if (message.type === 'server') {
+                        var websocketResponse = $("#websocketResponse");
+                        websocketResponse.append("<p>" + message.body + "</p>");
+                    }
                 });
             });
         }
 
-        function sendUrlsToServer(urls) {
+        function sendUrlsToServer(urls, QRws) {
             // Enviar las URLs al servidor a través del WebSocket
-            stompClient.send("/topic/csv", {}, JSON.stringify(urls));
+            var payload = {
+                urls: urls,
+                generateQr: QRws
+            };
+            stompClient.send("/topic/csv", {}, JSON.stringify(payload));
         }
 
 
