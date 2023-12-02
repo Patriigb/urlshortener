@@ -68,6 +68,6 @@ class ApplicationConfiguration(
 
     @Bean 
     fun metricsUseCase(registry: MeterRegistry) =
-        MetricsUseCaseImpl(clickRepositoryService(), registry)
+        MetricsUseCaseImpl(clickRepositoryService(), shortUrlRepositoryService(), registry)
     
 }

@@ -4,7 +4,6 @@ package es.unizar.urlshortener.infrastructure.delivery
 
 import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
-import com.google.common.util.concurrent.RateLimiter
 import es.unizar.urlshortener.core.ClickProperties
 import es.unizar.urlshortener.core.ShortUrlProperties
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
@@ -14,7 +13,6 @@ import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import es.unizar.urlshortener.core.usecases.MetricsUseCase
 import es.unizar.urlshortener.core.QueueController
-import es.unizar.urlshortener.core.RedirectionNotFound
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.hateoas.server.mvc.linkTo
 import org.springframework.http.HttpHeaders
@@ -28,37 +26,24 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RestController
 import java.net.URI
-import org.springframework.web.bind.annotation.RequestParam
-import org.springframework.web.bind.annotation.RequestPart
 import org.springframework.web.multipart.MultipartFile
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import java.io.StringReader
 import java.io.StringWriter
-import java.util.concurrent.BlockingQueue
-import java.util.concurrent.LinkedBlockingQueue
-import java.util.concurrent.ConcurrentLinkedQueue
-import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
-import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.context.annotation.Configuration
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
-import org.springframework.web.socket.messaging.SessionSubscribeEvent
-import org.springframework.context.event.EventListener
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.simp.annotation.SubscribeMapping
 import org.springframework.messaging.handler.annotation.SendTo
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.messaging.simp.config.MessageBrokerRegistry
-import org.springframework.messaging.simp.user.SimpUserRegistry
-import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 //import jakarta.websocket.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
@@ -210,7 +195,6 @@ class UrlShortenerControllerImpl(
 
     @GetMapping("/{id:(?!api|index).*}")
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest): ResponseEntity<Unit> {
-           
             val redirection = redirectUseCase.redirectTo(id)
         
             val logFunction: suspend () -> Unit = {
@@ -251,10 +235,25 @@ class UrlShortenerControllerImpl(
 
     @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
     fun scheduleMetricsRegistration() {
-        metricsUseCase.registerOperatingSystemMetrics()
-        println(metricsUseCase.dumb())
+        
+        val miFunction: suspend () -> Unit = {
+            metricsUseCase.registerOperatingSystemMetrics()
+        }
+        controlador.producerMethod("registerOperatingSystemMetrics", miFunction)
+
     }
-    @GetMapping("/api/metrics")
+
+    @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
+    fun scheduleMetricsRegistration2() {
+
+        val miFunction: suspend () -> Unit = {
+            metricsUseCase.registerShortUrlsCount()
+        }
+        controlador.producerMethod("registerShortUrlsCount", miFunction)
+
+    }
+
+    @GetMapping("/api/stats/metrics")
     override fun getMetrics(request: HttpServletRequest): ResponseEntity<Any> {
         val client = HttpClient.newBuilder().build()
         val request = HttpRequest.newBuilder()
@@ -266,12 +265,11 @@ class UrlShortenerControllerImpl(
             return ResponseEntity.ok().header("Content-Type", "application/json")
                 .body(response.body())
         }
-        // SI NO LO ENCUENTRA ES BAD REQUEST?
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
 
     }
 
-    @GetMapping("/api/metrics/{id}")
+    @GetMapping("/api/stats/metrics/{id}")
     override fun getMetric(@PathVariable("id") id: String): ResponseEntity<Any> {
         val client = HttpClient.newBuilder().build()
         val request = HttpRequest.newBuilder()

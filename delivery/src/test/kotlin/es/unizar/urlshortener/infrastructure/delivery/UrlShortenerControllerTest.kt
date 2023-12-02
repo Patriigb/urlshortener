@@ -5,7 +5,9 @@ package es.unizar.urlshortener.infrastructure.delivery
 import com.opencsv.CSVWriter
 import es.unizar.urlshortener.core.*
 import es.unizar.urlshortener.core.usecases.*
+import io.restassured.RestAssured
 import org.junit.jupiter.api.Assertions.assertEquals
+import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.never
@@ -14,24 +16,24 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
+import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
+import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.HttpHeaders
 import org.springframework.http.MediaType
-import org.springframework.mock.web.MockHttpServletRequest
+import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.mock.web.MockMultipartFile
-import org.springframework.util.LinkedMultiValueMap
-import org.springframework.util.MultiValueMap
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.web.servlet.MockMvc
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get
 import org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post
 import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
-import org.springframework.test.web.servlet.result.MockMvcResultMatchers
-import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
+import org.springframework.util.LinkedMultiValueMap
 import java.io.StringWriter
-import java.net.URI
+//import io.restassured.module.mockmvc.RestAssuredMockMvc
+import org.mockito.MockitoAnnotations
 
 @WebMvcTest
 @ContextConfiguration(
@@ -40,6 +42,7 @@ import java.net.URI
         RestResponseEntityExceptionHandler::class
     ]
 )
+//@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class UrlShortenerControllerTest {
 
     @Autowired
@@ -289,10 +292,22 @@ class UrlShortenerControllerTest {
     }
 
     /*
+    @BeforeEach
+    fun setUp() {
+        // Inicializar los mocks de Mockito
+        MockitoAnnotations.openMocks(this)
+
+        // Configurar RestAssured para usar MockMvc y el puerto asignado dinámicamente
+        //RestAssuredMockMvc.mockMvc(mockMvc)
+
+        // Configurar RestAssured para usar el puerto local asignado dinámicamente
+        RestAssured.baseURI = "http://localhost/"
+        RestAssured.port = localServerPort
+    }
     @Test
     fun `gets list of metrics`() {
         mockMvc.perform(
-            get("/api/metrics")
+            get("/api/stats/metrics")
         )
             .andDo(print())
             .andExpect(status().isOk)
@@ -300,13 +315,14 @@ class UrlShortenerControllerTest {
             .andExpect(jsonPath("$.names").isArray)
             .andExpect(jsonPath("$.names").isNotEmpty)
     }
-
+*/
+    /*
     @Test
     fun `get specific metric and is ok`() {
         val metricName = "jvm.memory.used"
 
         mockMvc.perform(
-            get("/api/metrics/$metricName")
+            get("/api/stats/metrics/$metricName")
                 .contentType(MediaType.APPLICATION_JSON)
         )
             .andExpect(status().isOk)

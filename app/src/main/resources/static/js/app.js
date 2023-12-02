@@ -175,7 +175,7 @@ $(document).ready(
                 event.preventDefault();
                 $.ajax({
                     type: "GET",
-                    url: '/api/metrics',
+                    url: '/api/stats/metrics',
                     success: function (data) {
                         console.log("Data:", data);
                         displayMetrics(data)

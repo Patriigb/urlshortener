@@ -19,6 +19,7 @@ interface ClickRepositoryService {
 interface ShortUrlRepositoryService {
     fun findByKey(hash: String): ShortUrl?
     fun save(su: ShortUrl): ShortUrl
+    fun countShortUrls() : Int
 }
 
 /**

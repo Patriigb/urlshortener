@@ -21,15 +21,11 @@ class ClickRepositoryServiceImpl(
     override fun countClicksByOperatingSystem(osName: String): Int {
         println("countClicksByOperatingSystem")
         println("osName: $osName")
-        println(clickEntityRepository.findAll()
-            .filter { it.platform == osName }
-            .count())
+        println(clickEntityRepository.findAll().count { it.platform == osName })
             
         return clickEntityRepository.findAll()
             .filter { it.platform == osName }
             .count()
-        // clickEntityRepository.getAllClicks()
-        // return clickEntityRepository.countByOperatingSystem(osName)
     } 
     
     override fun findAllOperatingSystems(): List<String> {
@@ -47,6 +43,10 @@ class ShortUrlRepositoryServiceImpl(
     override fun findByKey(hash: String): ShortUrl? = shortUrlEntityRepository.findByHash(hash)?.toDomain()
 
     override fun save(su: ShortUrl): ShortUrl = shortUrlEntityRepository.save(su.toEntity()).toDomain()
+
+    override fun countShortUrls () : Int {
+        return shortUrlEntityRepository.findAll().count()
+    }
 }
 
 

@@ -2,33 +2,25 @@
 
 package es.unizar.urlshortener.core.usecases
 
-import es.unizar.urlshortener.core.Click
 import es.unizar.urlshortener.core.ClickRepositoryService
-import io.micrometer.core.instrument.MeterRegistry
-import io.micrometer.core.instrument.Counter
-import org.springframework.stereotype.Component
-import io.micrometer.core.instrument.Tags
-import io.micrometer.core.instrument.Metrics
-import io.micrometer.core.instrument.Gauge
+import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import io.micrometer.core.instrument.Meter
-import io.micrometer.core.instrument.Meter.Type
+import io.micrometer.core.instrument.MeterRegistry
 
 
 // /**
 //  * Given a content returns a String that contains metrics.
 //  */
 interface MetricsUseCase {
-    //fun generateMetrics() : JsonContent
-    fun getOperatingSystemsCount(osName: String) : Int
     fun registerOperatingSystemMetrics()
-    fun dumb() : String
 
+    fun registerShortUrlsCount()
 
 }
 
-// En la implementación MetricsUseCaseImpl
 class MetricsUseCaseImpl (
     private val clickRepositoryService: ClickRepositoryService,
+    private val shortUrlRepositoryService: ShortUrlRepositoryService,
     private val registry: MeterRegistry
 ) : MetricsUseCase {
     // private val operatingSystemsCounter: Counter = Counter.builder("operating_systems_count")
@@ -42,39 +34,60 @@ class MetricsUseCaseImpl (
     //     return clickRepositoryService.findAllOperatingSystems().distinct()
     // }
 
+    //private val operatingSystemsCount: MutableMap<String, Int> = mutableMapOf()
+
 
     override fun registerOperatingSystemMetrics() {
         val operatingSystems = clickRepositoryService.findAllOperatingSystems()
-        println("Operating Systems: $operatingSystems")
-        val operatingSystemsDistincs = operatingSystems.distinct()
-        println("Operating Systems Distinct: $operatingSystemsDistincs")
+        // println("Operating Systems: $operatingSystems")
+        val operatingSystemsDistinct = operatingSystems.distinct()
+        // println("Operating Systems Distinct: $operatingSystemsDistincs")
+        val total = operatingSystemsDistinct.count()
+        val metricTotal = "operating.system.count"
 
-        for (osName in operatingSystemsDistincs) {
-            println("osName: $osName")
+        try {
+            registry.removeByPreFilterId(registry.get(metricTotal).meter().id)
+            for (so in operatingSystemsDistinct) {
+                val nameMetric = "operating.system.count.$so"
+                registry.removeByPreFilterId(registry.get(nameMetric).meter().id)
+            }
+        } catch (e: Exception) {
+            // Manejo de otras excepciones
+            // println("Se produjo un error inesperado: ${e.message}")
+        }
+
+        println("Total: $total")
+        registry.gauge(
+            metricTotal,
+            total.toDouble()
+        )
+        for (osName in operatingSystemsDistinct) {
             val count = clickRepositoryService.countClicksByOperatingSystem(osName)
-            println("count: $count")
-
+            println("osName: $osName, count: $count")
             registry.gauge(
-                "operating.systems.count",
-                Tags.of("os", osName),
+                "$metricTotal.$osName",
                 count.toDouble()
             )
         }
     }
-    // override fun registerOperatingSystemsMetrics() {
-    //     val operatingSystems = clickRepositoryService.findAllOperatingSystems()
-    //     operatingSystems.forEach { osName ->
-    //         operatingSystemsCounter.tags("os", osName).increment()
-    //     }
-    // }
 
-    override fun getOperatingSystemsCount(osName: String): Int {
-        return clickRepositoryService.countClicksByOperatingSystem(osName)
+    override fun registerShortUrlsCount(){
+        val metricUrls = "short.urls.count"
+        val count = shortUrlRepositoryService.countShortUrls()
+        try {
+            registry.removeByPreFilterId(registry.get(metricUrls).meter().id)
+            registry.gauge(
+                metricUrls,
+                count.toDouble()
+            )
+        } catch (e: Exception) {
+            // Manejo de otras excepciones
+            // println("Se produjo un error inesperado: ${e.message}")
+        }
+
+        println("SHORT URLS COUNT $count")
     }
 
-    override fun dumb(): String {
-        return "dumb"
-    }
 }
 
 
