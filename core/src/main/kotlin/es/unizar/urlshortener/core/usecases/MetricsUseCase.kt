@@ -51,10 +51,14 @@ class MetricsUseCaseImpl (
                 val nameMetric = "operating.system.count.$so"
                 registry.removeByPreFilterId(registry.get(nameMetric).meter().id)
             }
-        } catch (e: Exception) {
+        } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
+            // Handle MeterNotFoundException
+            println("Caught MeterNotFoundException: ${e.message}")
+            // Perform any specific actions related to this exception
+        } /*catch (e: Exception) {
             // Manejo de otras excepciones
-            // println("Se produjo un error inesperado: ${e.message}")
-        }
+            println("Se produjo un error inesperado: ${e.message}")
+        }*/
 
         println("Total: $total")
         registry.gauge(
@@ -80,10 +84,14 @@ class MetricsUseCaseImpl (
                 metricUrls,
                 count.toDouble()
             )
-        } catch (e: Exception) {
+       } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
+            // Handle MeterNotFoundException
+            println("Caught MeterNotFoundException: ${e.message}")
+            // Perform any specific actions related to this exception
+        } /* catch (e: Exception) {
             // Manejo de otras excepciones
-            // println("Se produjo un error inesperado: ${e.message}")
-        }
+            println("Se produjo un error inesperado: ${e.message}")
+        }*/
 
         println("SHORT URLS COUNT $count")
     }
