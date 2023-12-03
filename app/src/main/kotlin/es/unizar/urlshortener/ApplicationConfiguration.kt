@@ -9,6 +9,7 @@ import es.unizar.urlshortener.core.usecases.MetricsUseCaseImpl
 import es.unizar.urlshortener.core.usecases.ProcessCsvUseCaseImpl
 import es.unizar.urlshortener.core.usecases.RedirectUseCaseImpl
 import es.unizar.urlshortener.core.QueueControllerImpl
+import es.unizar.urlshortener.core.QueueController
 import io.micrometer.core.instrument.MeterRegistry
 
 import es.unizar.urlshortener.infrastructure.delivery.HashServiceImpl
@@ -51,16 +52,20 @@ class ApplicationConfiguration(
     fun redirectUseCase() = RedirectUseCaseImpl(shortUrlRepositoryService())
 
     @Bean
-    fun logClickUseCase() = LogClickUseCaseImpl(clickRepositoryService(), shortUrlRepositoryService())
+    fun queueController(): QueueController {
+        return QueueControllerImpl()
+    }
+    
+    @Bean
+    fun logClickUseCase() = LogClickUseCaseImpl(clickRepositoryService(), shortUrlRepositoryService(),
+        queueController())
     
     @Bean
     fun createQrUseCase() = CreateQrUseCaseImpl(shortUrlRepositoryService())
 
     @Bean
     fun processCsvUseCase() = ProcessCsvUseCaseImpl()
-
-    @Bean
-    fun queueController() = QueueControllerImpl()
+    
 
     @Bean
     fun createShortUrlUseCase() =

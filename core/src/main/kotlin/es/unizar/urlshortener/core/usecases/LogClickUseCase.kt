@@ -5,6 +5,7 @@ import es.unizar.urlshortener.core.ClickProperties
 import es.unizar.urlshortener.core.ClickRepositoryService
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import es.unizar.urlshortener.core.RedirectionNotFound
+import es.unizar.urlshortener.core.QueueController
 import eu.bitwalker.useragentutils.UserAgent
 import eu.bitwalker.useragentutils.Browser
 import eu.bitwalker.useragentutils.OperatingSystem
@@ -26,7 +27,8 @@ interface LogClickUseCase {
  */
 class LogClickUseCaseImpl(
     private val clickRepository: ClickRepositoryService,
-    private val shortUrlRepository: ShortUrlRepositoryService
+    private val shortUrlRepository: ShortUrlRepositoryService,
+    private val controlador: QueueController
 ) : LogClickUseCase {
     override fun getSumary(key: String) : MultiValueMap<String, Pair<String, String>> {
         println("key: " + key)
@@ -47,6 +49,13 @@ class LogClickUseCaseImpl(
         return multiValueMap
     } 
 
+    private fun saveLog(cl: Click){
+        val logFunction: suspend () -> Unit = {
+            clickRepository.save(cl)
+        }
+        controlador.producerMethod("saveLog", logFunction)
+    }
+
     override fun logClick(key: String, data: ClickProperties, userAgent: String?) {
         if(userAgent != null){
             val userAgentParse = UserAgent.parseUserAgentString(userAgent)
@@ -63,7 +72,7 @@ class LogClickUseCaseImpl(
                     platform = osName
                 )
             )
-            clickRepository.save(cl)
+            saveLog(cl)
         }
         else{
             val cl = Click(
