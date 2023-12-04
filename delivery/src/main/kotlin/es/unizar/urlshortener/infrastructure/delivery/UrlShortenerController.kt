@@ -250,7 +250,6 @@ class UrlShortenerControllerImpl(
         if (shortUrl != null && shortUrl.properties.qr == true) {
 
             if(shortUrl.properties.qrImage == null){
-
                 val errorResponse = mapOf("error" to "Imagen QR no disponible. Intentalo más tarde.")
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .header("Retry-After", "5")
