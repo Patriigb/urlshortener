@@ -2,12 +2,10 @@
 
 package es.unizar.urlshortener.infrastructure.delivery
 
-import com.fasterxml.jackson.databind.ObjectMapper
 import com.opencsv.CSVWriter
 import es.unizar.urlshortener.core.*
 import es.unizar.urlshortener.core.usecases.*
 import org.junit.jupiter.api.Assertions.assertEquals
-import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.never
@@ -16,16 +14,9 @@ import org.mockito.kotlin.times
 import org.mockito.kotlin.verify
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
-import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
-import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
-import org.springframework.boot.test.web.client.TestRestTemplate
-import org.springframework.boot.test.web.server.LocalServerPort
-//import org.springframework.boot.web.server.LocalServerPort
 import org.springframework.http.HttpHeaders
-import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
-import org.springframework.http.ResponseEntity
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.web.servlet.MockMvc
@@ -36,18 +27,7 @@ import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.util.LinkedMultiValueMap
 import java.io.StringWriter
-import java.net.ServerSocket
-import java.util.*
-import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.messaging.simp.SimpMessagingTemplate
-import org.springframework.messaging.simp.stomp.*
-import org.springframework.web.context.WebApplicationContext
-import org.springframework.web.socket.client.standard.StandardWebSocketClient
-import org.springframework.web.socket.messaging.WebSocketStompClient
-import org.springframework.web.socket.sockjs.client.SockJsClient
-import org.springframework.web.socket.sockjs.client.WebSocketTransport
-import java.lang.reflect.Type
-import java.util.concurrent.CountDownLatch
 
 @WebMvcTest
 @ContextConfiguration(
@@ -213,7 +193,6 @@ class UrlShortenerControllerTest {
     
     }
 
-
     @Test
     fun `getQr returns Retry_after if key exists and qrImage is not available`() {
 
@@ -303,5 +282,4 @@ class UrlShortenerControllerTest {
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.statusCode").value(400))
     }
-
 }

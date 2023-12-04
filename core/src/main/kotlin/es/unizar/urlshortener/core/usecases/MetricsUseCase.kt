@@ -4,7 +4,6 @@ package es.unizar.urlshortener.core.usecases
 
 import es.unizar.urlshortener.core.ClickRepositoryService
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
-import io.micrometer.core.instrument.Meter
 import io.micrometer.core.instrument.MeterRegistry
 
 
@@ -39,9 +38,7 @@ class MetricsUseCaseImpl (
 
     override fun registerOperatingSystemMetrics() {
         val operatingSystems = clickRepositoryService.findAllOperatingSystems()
-        // println("Operating Systems: $operatingSystems")
         val operatingSystemsDistinct = operatingSystems.distinct()
-        // println("Operating Systems Distinct: $operatingSystemsDistincs")
         val total = operatingSystemsDistinct.count()
         val metricTotal = "operating.system.count"
 
@@ -54,11 +51,7 @@ class MetricsUseCaseImpl (
         } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
             // Handle MeterNotFoundException
             println("Caught MeterNotFoundException: ${e.message}")
-            // Perform any specific actions related to this exception
-        } /*catch (e: Exception) {
-            // Manejo de otras excepciones
-            println("Se produjo un error inesperado: ${e.message}")
-        }*/
+        }
 
         println("Total: $total")
         registry.gauge(
@@ -84,39 +77,12 @@ class MetricsUseCaseImpl (
                 metricUrls,
                 count.toDouble()
             )
-       } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
+        } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
             // Handle MeterNotFoundException
             println("Caught MeterNotFoundException: ${e.message}")
-            // Perform any specific actions related to this exception
-        } /* catch (e: Exception) {
-            // Manejo de otras excepciones
-            println("Se produjo un error inesperado: ${e.message}")
-        }*/
+        }
 
         println("SHORT URLS COUNT $count")
     }
 
 }
-
-
-
-// class MetricsUseCaseImpl(
-//     // private val registry: MeterRegistry
-//     private val clickRepository: ClickRepositoryService
-// ) : MetricsUseCase {
-//   // class MetricsController(registry: MeterRegistry) {
-
-//     // private val operatingSystemsCounter: Counter = Counter.builder("operating_systems_count")
-//     //     .tag("version", "v1")
-//     //     .description("Count of Different Operating Systems")
-//     //     .register(registry)
-
-//     // override fun registerOperatingSystem(osName: String) {
-//     //     operatingSystemsCounter.tags("os", osName).increment()
-//     // }
-
-//     override fun getOperatingSystemsCount(osName: String): Int {
-//         // Supongamos que ClickRepository tiene un método para contar clics por sistema operativo
-//         return clickRepository.countByOperatingSystem(osName)
-//     }
-// }

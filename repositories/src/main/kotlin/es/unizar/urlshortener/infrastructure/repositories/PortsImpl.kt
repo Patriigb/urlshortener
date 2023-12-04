@@ -15,9 +15,6 @@ class ClickRepositoryServiceImpl(
     override fun findByKey(id: String): Iterable<Click>? = 
     clickEntityRepository.findByHash(id)?.map { it.toDomain() }
 
-    // override fun getAllClicks(): Iterable<Click>? =
-    //     clickEntityRepository.findAll().map { it.toDomain() } 
-
     override fun countClicksByOperatingSystem(osName: String): Int {
         println("countClicksByOperatingSystem")
         println("osName: $osName")

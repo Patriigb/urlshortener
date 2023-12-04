@@ -43,9 +43,6 @@ import org.springframework.messaging.simp.annotation.SubscribeMapping
 import org.springframework.messaging.handler.annotation.SendTo
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.messaging.simp.config.MessageBrokerRegistry
-//import jakarta.websocket.*
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
 import org.springframework.http.server.ServerHttpRequest
 import org.springframework.http.server.ServerHttpResponse
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor
@@ -332,8 +329,6 @@ class UrlShortenerControllerImpl(
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
     }
 
-
-
     @PostMapping("/api/link", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     override fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut> =
         createShortUrlUseCase.create(
@@ -348,17 +343,15 @@ class UrlShortenerControllerImpl(
             val url = linkTo<UrlShortenerControllerImpl> { redirectTo(it.hash, request) }.toUri()
             h.location = url
 
-
             // url del qr más /qr
             val response = if (data.generateQr == true) {
                 val urlQr = "$url/qr"
-                // comprobar que headersSumary no es null
+
                 val miFuncion: suspend () -> Unit = {
                     createQrUseCase.generateQRCode(urlQr, it)
                 }
                 controlador.producerMethod("generateQRCode", miFuncion)
-                
-              //  controlador.consumerMethod()
+
                 ShortUrlDataOut(
                     url = url,
                     properties = mapOf(
@@ -512,8 +505,5 @@ class UrlShortenerControllerImpl(
             val errorMessage = e.message ?: "ERROR"
             return ShortInfo(uri, shortenedUri, errorMessage)
         }
-
     }
-
-
 }

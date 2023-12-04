@@ -1,10 +1,12 @@
 package es.unizar.urlshortener
 
-
 import io.restassured.RestAssured
 import io.restassured.RestAssured.given
 import io.restassured.http.ContentType
-import org.hamcrest.CoreMatchers.*
+import org.hamcrest.CoreMatchers.notNullValue
+import org.hamcrest.CoreMatchers.isA
+import org.hamcrest.CoreMatchers.hasItems
+import org.hamcrest.CoreMatchers.equalTo
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.boot.test.context.SpringBootTest

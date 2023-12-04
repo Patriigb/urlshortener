@@ -7,8 +7,6 @@ import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import es.unizar.urlshortener.core.RedirectionNotFound
 import es.unizar.urlshortener.core.QueueController
 import eu.bitwalker.useragentutils.UserAgent
-import eu.bitwalker.useragentutils.Browser
-import eu.bitwalker.useragentutils.OperatingSystem
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 
@@ -84,5 +82,4 @@ class LogClickUseCaseImpl(
             clickRepository.save(cl)
         }
     }
-
 }

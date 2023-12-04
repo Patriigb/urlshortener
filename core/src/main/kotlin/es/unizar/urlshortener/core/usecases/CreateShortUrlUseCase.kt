@@ -3,9 +3,6 @@
 package es.unizar.urlshortener.core.usecases
 
 import es.unizar.urlshortener.core.*
-import java.net.URI
-
-
 
 /**
  * Given an url returns the key that is used to create a short URL.
@@ -28,15 +25,14 @@ class CreateShortUrlUseCaseImpl(
 ) : CreateShortUrlUseCase {
     override fun create(url: String, data: ShortUrlProperties): ShortUrl {
         if (validatorService.isValid(url)) {
-           // var qrImage: ByteArray? = null
             val hash: String = hashService.hasUrl(url)
             val id = shortUrlRepository.findByKey(hash)?.id
 
 
             var qr = shortUrlRepository.findByKey(hash)?.properties?.qr ?: false
-            var qrImage = shortUrlRepository.findByKey(hash)?.properties?.qrImage
+            val qrImage = shortUrlRepository.findByKey(hash)?.properties?.qrImage
 
-            var dataQr = data.qr ?: false
+            val dataQr = data.qr ?: false
             qr = qr or dataQr
 
             val su = ShortUrl(

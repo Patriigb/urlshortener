@@ -3,9 +3,6 @@ package es.unizar.urlshortener.core.usecases
 import es.unizar.urlshortener.core.Redirection
 import es.unizar.urlshortener.core.RedirectionNotFound
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
-import eu.bitwalker.useragentutils.UserAgent
-import eu.bitwalker.useragentutils.Browser
-import eu.bitwalker.useragentutils.OperatingSystem
 
 /**
  * Given a key returns a [Redirection] that contains a [URI target][Redirection.target]

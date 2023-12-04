@@ -5,12 +5,12 @@ package es.unizar.urlshortener.core
  */
 interface ClickRepositoryService {
     fun findByKey(id: String): Iterable<Click>?
+
     fun save(cl: Click): Click
-    // fun getAllClicks(): Iterable<Click>?
+
     fun countClicksByOperatingSystem(osName: String): Int
+
     fun findAllOperatingSystems(): List<String>
-
-
 }
 
 /**
@@ -18,7 +18,9 @@ interface ClickRepositoryService {
  */
 interface ShortUrlRepositoryService {
     fun findByKey(hash: String): ShortUrl?
+
     fun save(su: ShortUrl): ShortUrl
+
     fun countShortUrls() : Int
 }
 

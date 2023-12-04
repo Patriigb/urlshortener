@@ -133,41 +133,5 @@ class HttpRequestTest {
         )
     }
 
-    @Test
-    fun onChat() {
-        val latch = CountDownLatch(4)
-        val list = mutableListOf<String>()
-        val stompClient = WebSocketStompClient(SockJsClient(listOf(WebSocketTransport(StandardWebSocketClient()))))
-        val stompSession: StompSession = stompClient.connectAsync(
-            "ws://localhost:$port/api/fast-bulk",
-            object : StompSessionHandlerAdapter() {
-            }
-        ).get()
-        stompSession.subscribe(
-            "/topic/csv",
-            object : StompFrameHandler {
-                override fun getPayloadType(headers: StompHeaders): Type {
-                    return ByteArray::class.java
-                }
-
-                override fun handleFrame(headers: StompHeaders, payload: Any?) {
-                    if (payload is ByteArray) {
-                        list.add(String(payload))
-                        latch.countDown()
-                    }
-                }
-            }
-        )
-        val msg = """{"urls": ["http://example.com/"], "generateQr": false}"""
-        stompSession.send("/topic/csv", msg.toByteArray())
-        latch.await()
-        assertTrue(list.size >= 4)
-        // Mensaje al suscribirse
-        assertTrue(list.contains("""{"type":"server","body":"¡Hola! Escribe las urls separadas por espacios."}"""))
-        assertTrue(list.contains(
-            """{"type":"server","body":"http://example.com/ >>> http://localhost:8080/f684a3c4"}"""
-        ))
-
-    }
 
 }

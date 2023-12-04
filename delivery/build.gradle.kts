@@ -20,7 +20,13 @@ dependencies {
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
+    testImplementation("org.springframework.boot:spring-boot-starter-jdbc")
     testImplementation("org.mockito.kotlin:mockito-kotlin:${Version.MOCKITO}")
-    //testImplementation("org.mock-server:mockserver-netty:5.3.0")
+    testImplementation("org.apache.httpcomponents.client5:httpclient5")
+
     testImplementation("org.testng:testng:7.1.0")
+}
+
+kover {
+    excludeJavaCode()
 }
