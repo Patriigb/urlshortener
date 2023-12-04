@@ -1,6 +1,7 @@
 plugins {
     id("urlshortener.spring-library-conventions")
     kotlin("plugin.spring")
+    id("org.jetbrains.kotlinx.kover") version "0.7.4"
 }
 
 dependencies {

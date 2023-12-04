@@ -6,11 +6,13 @@ import es.unizar.urlshortener.infrastructure.delivery.ShortUrlDataOut
 import org.apache.hc.client5.http.impl.classic.HttpClientBuilder
 import org.assertj.core.api.Assertions.assertThat
 import org.junit.jupiter.api.AfterEach
+import org.junit.jupiter.api.Assertions.assertTrue
 import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment
+import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.boot.test.web.server.LocalServerPort
 import org.springframework.http.*
@@ -20,6 +22,17 @@ import org.springframework.test.jdbc.JdbcTestUtils
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import java.net.URI
+import java.util.concurrent.CountDownLatch
+import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.messaging.simp.stomp.StompFrameHandler
+import org.springframework.messaging.simp.stomp.StompHeaders
+import org.springframework.messaging.simp.stomp.StompSession
+import org.springframework.messaging.simp.stomp.StompSessionHandlerAdapter
+import org.springframework.web.socket.client.standard.StandardWebSocketClient
+import org.springframework.web.socket.messaging.WebSocketStompClient
+import org.springframework.web.socket.sockjs.client.SockJsClient
+import org.springframework.web.socket.sockjs.client.WebSocketTransport
+import java.lang.reflect.Type
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 class HttpRequestTest {
@@ -100,7 +113,7 @@ class HttpRequestTest {
         )
 
         assertThat(response.statusCode).isEqualTo(HttpStatus.BAD_REQUEST)
-
+        println(JdbcTestUtils.countRowsInTable(jdbcTemplate, "shorturl"))
         assertThat(JdbcTestUtils.countRowsInTable(jdbcTemplate, "shorturl")).isEqualTo(0)
         assertThat(JdbcTestUtils.countRowsInTable(jdbcTemplate, "click")).isEqualTo(0)
     }
@@ -117,5 +130,42 @@ class HttpRequestTest {
             HttpEntity(data, headers),
             ShortUrlDataOut::class.java
         )
+    }
+
+    @Test
+    fun onChat() {
+        val latch = CountDownLatch(4)
+        val list = mutableListOf<String>()
+        val stompClient = WebSocketStompClient(SockJsClient(listOf(WebSocketTransport(StandardWebSocketClient()))))
+        val stompSession: StompSession = stompClient.connectAsync(
+            "ws://localhost:$port/api/fast-bulk",
+            object : StompSessionHandlerAdapter() {
+            }
+        ).get()
+        stompSession.subscribe(
+            "/topic/csv",
+            object : StompFrameHandler {
+                override fun getPayloadType(headers: StompHeaders): Type {
+                    return ByteArray::class.java
+                }
+
+                override fun handleFrame(headers: StompHeaders, payload: Any?) {
+                    if (payload is ByteArray) {
+                        list.add(String(payload))
+                        latch.countDown()
+                    }
+                }
+            }
+        )
+        val msg = """{"urls": ["http://example.com/"], "generateQr": false}"""
+        stompSession.send("/topic/csv", msg.toByteArray())
+        latch.await()
+        assertTrue(list.size >= 4)
+        // Mensaje al suscribirse
+        assertTrue(list.contains("""{"type":"server","body":"¡Hola! Escribe las urls separadas por espacios."}"""))
+        assertTrue(list.contains(
+            """{"type":"server","body":"http://example.com/ >>> http://localhost:8080/f684a3c4"}"""
+        ))
+
     }
 }

@@ -167,7 +167,7 @@ class RemoteAddressHandshakeInterceptor : HandshakeInterceptor {
         attributes: MutableMap<String, Any>
     ): Boolean {
         // Obtener la dirección remota del cliente desde la solicitud y almacenarla como un atributo de la sesión
-        attributes["remoteAddr"] = request.remoteAddress.address?.hostAddress ?: "unknown"
+        attributes["remoteAddr"] = request.remoteAddress.address.hostAddress
         return true
     }
     override fun afterHandshake(
