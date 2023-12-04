@@ -101,7 +101,7 @@ interface UrlShortenerController {
     /*
     * Gets a specific metric
     * */
-    fun getMetric(id: String): ResponseEntity<Any>
+    fun getMetric(id: String, request: HttpServletRequest): ResponseEntity<Any>
     
 }
 
@@ -293,12 +293,17 @@ class UrlShortenerControllerImpl(
 
     @GetMapping("/api/stats/metrics")
     override fun getMetrics(request: HttpServletRequest): ResponseEntity<Any> {
+
+        // Obtén la URI actual de la solicitud
+        val currentUri = URI.create(request.requestURL.toString())
+        val uriMetrics = URI("${currentUri.scheme}://${currentUri.host}:${currentUri.port}/actuator/metrics")
+
         val client = HttpClient.newBuilder().build()
         val httpRequest = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:8080/actuator/metrics"))
-            .build();
+            .uri(uriMetrics)
+            .build()
 
-        val response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString());
+        val response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString())
         if(response.statusCode() == OK){
             return ResponseEntity.ok().header("Content-Type", "application/json")
                 .body(response.body())
@@ -308,13 +313,18 @@ class UrlShortenerControllerImpl(
     }
 
     @GetMapping("/api/stats/metrics/{id}")
-    override fun getMetric(@PathVariable("id") id: String): ResponseEntity<Any> {
-        val client = HttpClient.newBuilder().build()
-        val request = HttpRequest.newBuilder()
-            .uri(URI.create("http://localhost:8080/actuator/metrics/$id"))
-            .build();
+    override fun getMetric(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<Any> {
+        // Obtén la URI actual de la solicitud
+        val currentUri = URI.create(request.requestURL.toString())
+        val uriMetric = URI("${currentUri.scheme}://${currentUri.host}:${currentUri.port}/actuator/metrics/${id}")
 
-        val response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        println("URIIIIIII    $uriMetric")
+        val client = HttpClient.newBuilder().build()
+        val httpRequest = HttpRequest.newBuilder()
+            .uri(uriMetric)
+            .build()
+
+        val response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString())
         if(response.statusCode() == OK){
             return ResponseEntity.ok().header("Content-Type", "application/json")
                 .body(response.body())

@@ -2,13 +2,12 @@
 
 package es.unizar.urlshortener.infrastructure.delivery
 
+import com.fasterxml.jackson.databind.ObjectMapper
 import com.opencsv.CSVWriter
 import es.unizar.urlshortener.core.*
 import es.unizar.urlshortener.core.usecases.*
-import io.restassured.RestAssured
 import org.junit.jupiter.api.Assertions.assertEquals
 import org.junit.jupiter.api.Assertions.assertTrue
-import org.junit.jupiter.api.BeforeEach
 import org.junit.jupiter.api.Test
 import org.mockito.BDDMockito.given
 import org.mockito.BDDMockito.never
@@ -20,9 +19,13 @@ import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest
 import org.springframework.boot.test.context.SpringBootTest
 import org.springframework.boot.test.mock.mockito.MockBean
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment.RANDOM_PORT
+import org.springframework.boot.test.web.client.TestRestTemplate
 import org.springframework.boot.test.web.server.LocalServerPort
+//import org.springframework.boot.web.server.LocalServerPort
 import org.springframework.http.HttpHeaders
+import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
+import org.springframework.http.ResponseEntity
 import org.springframework.mock.web.MockMultipartFile
 import org.springframework.test.context.ContextConfiguration
 import org.springframework.test.web.servlet.MockMvc
@@ -33,8 +36,8 @@ import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.util.LinkedMultiValueMap
 import java.io.StringWriter
-//import io.restassured.module.mockmvc.RestAssuredMockMvc
-import org.mockito.MockitoAnnotations
+import java.net.ServerSocket
+import java.util.*
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.messaging.simp.stomp.*
@@ -300,55 +303,5 @@ class UrlShortenerControllerTest {
             .andExpect(status().isBadRequest)
             .andExpect(jsonPath("$.statusCode").value(400))
     }
-
-    /*
-    @BeforeEach
-    fun setUp() {
-        // Inicializar los mocks de Mockito
-        MockitoAnnotations.openMocks(this)
-
-        // Configurar RestAssured para usar MockMvc y el puerto asignado dinámicamente
-        //RestAssuredMockMvc.mockMvc(mockMvc)
-
-        // Configurar RestAssured para usar el puerto local asignado dinámicamente
-        RestAssured.baseURI = "http://localhost/"
-        RestAssured.port = localServerPort
-    }
-    @Test
-    fun `gets list of metrics`() {
-        mockMvc.perform(
-            get("/api/stats/metrics")
-        )
-            .andDo(print())
-            .andExpect(status().isOk)
-            .andExpect(content().contentType("application/json"))
-            .andExpect(jsonPath("$.names").isArray)
-            .andExpect(jsonPath("$.names").isNotEmpty)
-    }
-*/
-    /*
-    @Test
-    fun `get specific metric and is ok`() {
-        val metricName = "jvm.memory.used"
-
-        mockMvc.perform(
-            get("/api/stats/metrics/$metricName")
-                .contentType(MediaType.APPLICATION_JSON)
-        )
-            .andExpect(status().isOk)
-            .andExpect(content().contentType(MediaType.APPLICATION_JSON))
-            .andExpect(jsonPath("$.name").value(metricName))
-    }
-
-    @Test
-    fun `get specific metric returns NOT_FOUND if metric does not exists`() {
-        val metricName = "exists"
-        mockMvc.perform(
-            get("/api/metrics/$metricName")
-                .contentType(MediaType.APPLICATION_JSON)
-        )
-            .andExpect(status().isNotFound)
-    }
-     */
 
 }

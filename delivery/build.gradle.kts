@@ -21,5 +21,6 @@ dependencies {
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.mockito.kotlin:mockito-kotlin:${Version.MOCKITO}")
-    testImplementation("io.rest-assured:rest-assured:4.4.0")
+    //testImplementation("org.mock-server:mockserver-netty:5.3.0")
+    testImplementation("org.testng:testng:7.1.0")
 }

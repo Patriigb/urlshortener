@@ -29,6 +29,9 @@ dependencies {
     testImplementation("org.mockito.kotlin:mockito-kotlin:${Version.MOCKITO}")
     testImplementation("com.fasterxml.jackson.module:jackson-module-kotlin")
     testImplementation("org.apache.httpcomponents.client5:httpclient5")
+
+    testImplementation("io.rest-assured:rest-assured:4.4.0")
+    testImplementation("io.rest-assured:spring-mock-mvc:4.4.0")
 }
 
 kover {
