@@ -54,9 +54,11 @@ class UrlShortenerControllerWsTest {
         latch.await()
         assertTrue(list.size >= 4)
         // Mensaje al suscribirse
+        println(list[2])
         assertTrue(list.contains("""{"type":"server","body":"¡Hola! Escribe las urls separadas por espacios."}"""))
         assertTrue(list.contains(
             """{"type":"server","body":"http://example.com/ >>> http://localhost:8080/f684a3c4"}"""
         ))
+        stompSession.disconnect()
     }
 }
