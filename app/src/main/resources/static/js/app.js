@@ -225,7 +225,7 @@ $(document).ready(
                 console.log(metricName);
                     $.ajax({
                      type: "GET",
-                     url: '/api/stats/metrics' + metricName,
+                     url: '/api/stats/metrics/' + metricName,
                      success: function (metricData) {
                          console.log("Datos de la métrica " + metricName + ":", metricData);
 
