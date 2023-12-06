@@ -5,53 +5,60 @@ package es.unizar.urlshortener.infrastructure.delivery
 import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
 import es.unizar.urlshortener.core.ClickProperties
+import es.unizar.urlshortener.core.QueueController
 import es.unizar.urlshortener.core.ShortUrlProperties
+import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
 import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import es.unizar.urlshortener.core.usecases.MetricsUseCase
-import es.unizar.urlshortener.core.QueueController
 import jakarta.servlet.http.HttpServletRequest
+import jakarta.servlet.http.HttpSession
+import org.slf4j.LoggerFactory
+import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.context.annotation.Configuration
+import org.springframework.context.event.EventListener
 import org.springframework.hateoas.server.mvc.linkTo
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
+import org.springframework.http.server.ServerHttpRequest
+import org.springframework.http.server.ServerHttpResponse
+import org.springframework.http.server.ServletServerHttpRequest
+import org.springframework.messaging.handler.annotation.MessageMapping
+import org.springframework.messaging.simp.SimpMessageHeaderAccessor
+import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.messaging.simp.annotation.SendToUser
+import org.springframework.messaging.simp.annotation.SubscribeMapping
+import org.springframework.messaging.simp.config.MessageBrokerRegistry
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor
+import org.springframework.scheduling.annotation.EnableScheduling
+import org.springframework.scheduling.annotation.Scheduled
+import org.springframework.stereotype.Component
 import org.springframework.util.LinkedMultiValueMap
 import org.springframework.util.MultiValueMap
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RestController
-import java.net.URI
 import org.springframework.web.multipart.MultipartFile
-import es.unizar.urlshortener.core.ShortUrlRepositoryService
-import java.io.StringReader
-import java.io.StringWriter
-import org.springframework.scheduling.annotation.EnableScheduling
-import org.springframework.scheduling.annotation.Scheduled
-import org.springframework.stereotype.Component
-import org.springframework.context.annotation.Configuration
-import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
-import org.springframework.messaging.handler.annotation.MessageMapping
-import org.springframework.messaging.simp.annotation.SubscribeMapping
-import org.springframework.messaging.handler.annotation.SendTo
-import org.springframework.messaging.simp.SimpMessagingTemplate
-import org.springframework.messaging.simp.config.MessageBrokerRegistry
-import org.springframework.http.server.ServerHttpRequest
-import org.springframework.http.server.ServerHttpResponse
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor
-import org.springframework.web.socket.WebSocketHandler
+import org.springframework.web.socket.messaging.SessionSubscribeEvent
 import org.springframework.web.socket.server.HandshakeInterceptor
-
+import java.io.StringReader
+import java.io.StringWriter
+import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
+import java.security.Principal
+
 
 const val OK = 200
 const val BAD_REQUEST = 400
@@ -156,6 +163,7 @@ data class ShortInfo(
 )
 
 class RemoteAddressHandshakeInterceptor : HandshakeInterceptor {
+    private val log = LoggerFactory.getLogger(this::class.java)
 
     override fun beforeHandshake(
         request: ServerHttpRequest,
@@ -165,6 +173,9 @@ class RemoteAddressHandshakeInterceptor : HandshakeInterceptor {
     ): Boolean {
         // Obtener la dirección remota del cliente desde la solicitud y almacenarla como un atributo de la sesión
         attributes["remoteAddr"] = request.remoteAddress.address.hostAddress
+        val servletRequest = request as ServletServerHttpRequest
+        attributes["sessionId"] = servletRequest.servletRequest.session.id
+
         return true
     }
     override fun afterHandshake(
@@ -173,7 +184,7 @@ class RemoteAddressHandshakeInterceptor : HandshakeInterceptor {
         wsHandler: WebSocketHandler,
         exception: Exception?
     ) {
-        println("WebSocket handshake completed successfully.")
+        log.info("WebSocket handshake completed successfully.")
     }
 }
 
@@ -181,8 +192,8 @@ class RemoteAddressHandshakeInterceptor : HandshakeInterceptor {
 @EnableWebSocketMessageBroker
 class WebSocketConfig : WebSocketMessageBrokerConfigurer {
     override fun configureMessageBroker(config: MessageBrokerRegistry) {
-        config.enableSimpleBroker("/topic")
-        config.setApplicationDestinationPrefixes("/topic")
+        config.enableSimpleBroker("/topic", "/queue")
+        config.setApplicationDestinationPrefixes("/app","/user")
     }
 
     override fun registerStompEndpoints(registry: StompEndpointRegistry) {
@@ -215,9 +226,11 @@ class UrlShortenerControllerImpl(
     @Autowired
     private lateinit var messagingTemplate: SimpMessagingTemplate
 
+    private val log = LoggerFactory.getLogger(this::class.java)
+
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> {
-            println("el id es: $id")
+            //println("el id es: $id")
             
             val datos = logClickUseCase.getSumary(id)
 
@@ -229,13 +242,12 @@ class UrlShortenerControllerImpl(
     @GetMapping("/{id:(?!api|index).*}")
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest?): ResponseEntity<Unit> {
             val redirection = redirectUseCase.redirectTo(id)
-        
-            val logFunction: suspend () -> Unit = {
+
+            controlador.producerMethod("logClick") {
                 logClickUseCase.logClick(
                     id, ClickProperties(ip = request?.remoteAddr), request?.getHeader("User-Agent")
                 )
             }
-            controlador.producerMethod("logClick", logFunction)
 
             val headers = HttpHeaders()
             headers.location = URI.create(redirection.target)
@@ -269,21 +281,19 @@ class UrlShortenerControllerImpl(
 
     @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
     fun scheduleMetricsRegistration() {
-        
-        val miFunction: suspend () -> Unit = {
+
+        controlador.producerMethod("registerOperatingSystemMetrics") {
             metricsUseCase.registerOperatingSystemMetrics()
         }
-        controlador.producerMethod("registerOperatingSystemMetrics", miFunction)
 
     }
 
     @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
     fun scheduleMetricsRegistration2() {
 
-        val miFunction: suspend () -> Unit = {
+        controlador.producerMethod("registerShortUrlsCount") {
             metricsUseCase.registerShortUrlsCount()
         }
-        controlador.producerMethod("registerShortUrlsCount", miFunction)
 
     }
 
@@ -314,7 +324,7 @@ class UrlShortenerControllerImpl(
         val currentUri = URI.create(request.requestURL.toString())
         val uriMetric = URI("${currentUri.scheme}://${currentUri.host}:${currentUri.port}/actuator/metrics/${id}")
 
-        println("URIIIIIII    $uriMetric")
+        //println("URIIIIIII    $uriMetric")
         val client = HttpClient.newBuilder().build()
         val httpRequest = HttpRequest.newBuilder()
             .uri(uriMetric)
@@ -346,10 +356,9 @@ class UrlShortenerControllerImpl(
             val response = if (data.generateQr == true) {
                 val urlQr = "$url/qr"
 
-                val miFuncion: suspend () -> Unit = {
+                controlador.producerMethod("generateQRCode") {
                     createQrUseCase.generateQRCode(urlQr, it)
                 }
-                controlador.producerMethod("generateQRCode", miFuncion)
 
                 ShortUrlDataOut(
                     url = url,
@@ -415,8 +424,9 @@ class UrlShortenerControllerImpl(
                 )
                 if (checkQr && qr != null) {
                         urlQr = "$shortenedUri/qr"
-                        val miFuncion: suspend () -> Unit = { createQrUseCase.generateQRCode(urlQr, shortUrl) }
-                        controlador.producerMethod("generateQRCode", miFuncion)
+                        controlador.producerMethod("generateQRCode") {
+                            createQrUseCase.generateQRCode(urlQr, shortUrl)
+                        }
                 }
             }
             if (checkQr) {
@@ -430,50 +440,52 @@ class UrlShortenerControllerImpl(
     }
 
     @MessageMapping("/csv")
-    @SendTo("/topic/csv")
     fun fastBulk(data: WsData, accessor: SimpMessageHeaderAccessor) {
+
         val uris = data.urls
         val checkQr = data.generateQr
         val remoteAddr = accessor.sessionAttributes?.get("remoteAddr").toString()
+        val username = "user${accessor.sessionId}"
+        log.info("Mensaje recibido de $username")
 
         for (uri in uris) {
-            var msg: String
             val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, null, null, true, remoteAddr)
-
+            var msg : String
             if (errorMessage.isBlank()) {
-                val shortUrl = createShortUrlUseCase.create(
-                    url = originalUri,
-                    data = ShortUrlProperties(
-                        ip = remoteAddr,
-                        qr = checkQr
+                val result = runCatching {
+                    val shortUrl = createShortUrlUseCase.create(
+                        url = originalUri,
+                        data = ShortUrlProperties(
+                            ip = remoteAddr,
+                            qr = checkQr
+                        )
                     )
-                )
 
-                msg = if (checkQr) {
-                    val urlQr = "$shortenedUri/qr"
-                    val miFuncion: suspend () -> Unit = { createQrUseCase.generateQRCode(urlQr, shortUrl) }
-                    controlador.producerMethod("generateQRCode", miFuncion)
-                    "$originalUri >>> $shortenedUri >>> $urlQr"
-                } else {
-                    "$originalUri >>> $shortenedUri"
+                    if (checkQr) {
+                        val urlQr = "$shortenedUri/qr"
+                        controlador.producerMethod("generateQRCode") {
+                            createQrUseCase.generateQRCode(urlQr, shortUrl)
+                        }
+                        "$originalUri >>> $shortenedUri >>> $urlQr"
+                    } else {
+                        "$originalUri >>> $shortenedUri"
+                    }
                 }
 
-                messagingTemplate.convertAndSend(
-                    "/topic/csv",
-                    ServerMessage("server",msg))
-
+                msg = result.getOrElse {
+                    "Ha ocurrido un error: ${it.message}"
+                }
             } else {
-                messagingTemplate.convertAndSend(
-                    "/topic/csv",
-                    ServerMessage("server","Ha ocurrido un error: $errorMessage"))
+                msg = "Ha ocurrido un error: $errorMessage"
             }
+            messagingTemplate.convertAndSend("/queue/csv-$username", ServerMessage("server", msg))
         }
     }
 
-    @SubscribeMapping("/csv")
-    fun subscribeToCsv() {
-        val message = ServerMessage("server","¡Hola! Escribe las urls separadas por espacios.")
-        messagingTemplate.convertAndSend("/topic/csv", message)
+    @SubscribeMapping("/queue/csv")
+    fun handleSubscribeEvent() : ServerMessage {
+        log.info("Suscripcion")
+        return ServerMessage("server","¡Hola! Escribe una o varias urls separadas por espacios.")
     }
 
     /**

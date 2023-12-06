@@ -15,3 +15,6 @@ management:
 springdoc:
   swagger-ui:
     path: /swagger-ui.html
+logging:
+  level:
+    root: info

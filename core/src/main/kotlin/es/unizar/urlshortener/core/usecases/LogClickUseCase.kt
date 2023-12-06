@@ -48,10 +48,9 @@ class LogClickUseCaseImpl(
     } 
 
     private fun saveLog(cl: Click){
-        val logFunction: suspend () -> Unit = {
+        controlador.producerMethod("saveLog") {
             clickRepository.save(cl)
         }
-        controlador.producerMethod("saveLog", logFunction)
     }
 
     override fun logClick(key: String, data: ClickProperties, userAgent: String?) {

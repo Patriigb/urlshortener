@@ -5,6 +5,7 @@ package es.unizar.urlshortener.core.usecases
 import es.unizar.urlshortener.core.ClickRepositoryService
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import io.micrometer.core.instrument.MeterRegistry
+import org.slf4j.LoggerFactory
 
 
 // /**
@@ -34,7 +35,7 @@ class MetricsUseCaseImpl (
     // }
 
     //private val operatingSystemsCount: MutableMap<String, Int> = mutableMapOf()
-
+    private val log = LoggerFactory.getLogger(this::class.java)
 
     override fun registerOperatingSystemMetrics() {
         val operatingSystems = clickRepositoryService.findAllOperatingSystems()
@@ -50,10 +51,10 @@ class MetricsUseCaseImpl (
             }
         } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
             // Handle MeterNotFoundException
-            println("Caught MeterNotFoundException: ${e.message}")
+            log.debug("Caught MeterNotFoundException: ${e.message}")
         }
 
-        println("Total: $total")
+        //println("Total: $total")
         registry.gauge(
             metricTotal,
             total.toDouble()
@@ -79,10 +80,10 @@ class MetricsUseCaseImpl (
             )
         } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
             // Handle MeterNotFoundException
-            println("Caught MeterNotFoundException: ${e.message}")
+            log.debug("Caught MeterNotFoundException: ${e.message}")
         }
 
-        println("SHORT URLS COUNT $count")
+        //println("SHORT URLS COUNT $count")
     }
 
 }

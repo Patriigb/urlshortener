@@ -23,6 +23,9 @@ dependencies {
 
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
 
+    // Para los logs
+    implementation("ch.qos.logback:logback-classic:1.2.6")
+
     implementation("org.springframework.boot:spring-boot-starter-actuator:2.7.0")
     implementation("io.micrometer:micrometer-registry-prometheus:1.12.0") 
 }

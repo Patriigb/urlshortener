@@ -19,6 +19,8 @@ dependencies {
 
     implementation("org.springframework.boot:spring-boot-starter-websocket")
 
+    implementation("ch.qos.logback:logback-classic:1.2.6")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-jdbc")
     testImplementation("org.mockito.kotlin:mockito-kotlin:${Version.MOCKITO}")

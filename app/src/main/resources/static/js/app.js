@@ -286,7 +286,7 @@ $(document).ready(
                 console.log('Conectado: ' + frame);
 
                 // Suscribirse al canal '/topic/csv' para recibir respuestas del servidor
-                stompClient.subscribe('/topic/csv', function (response) {
+                stompClient.subscribe('/user/queue/csv', function (response) {
                     var message = JSON.parse(response.body);
 
                     // Manejar la respuesta del servidor
@@ -304,7 +304,7 @@ $(document).ready(
                 urls: urls,
                 generateQr: QRws
             };
-            stompClient.send("/topic/csv", {}, JSON.stringify(payload));
+            stompClient.send("/app/csv", {}, JSON.stringify(payload));
         }
 
 

@@ -7,6 +7,8 @@ import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 
 interface QueueController {
     fun insertarComando(nombre: String, funcion: suspend () -> Unit)
@@ -22,18 +24,18 @@ interface QueueController {
 
 class QueueControllerImpl : QueueController {
     private val cola: BlockingQueue<Pair<String, suspend () -> Unit>> = LinkedBlockingQueue()
+    private val log = LoggerFactory.getLogger(this::class.java)
 
     override fun insertarComando(nombre: String, funcion: suspend () -> Unit) {
         // Inserta el comando en la cola bloqueante
-        println("Comando insertado: $nombre")
+        log.info("Comando insertado: $nombre")
         cola.put(nombre to funcion)
     }
     
     override fun takeFromQueue() : suspend () -> Unit {
         // Obtiene el comando de la cola
         val (tag, comando) = cola.take()
-        println("Consumidor ejecutando comando: $tag")
-
+        log.info("Consumidor ejecutando comando: $tag")
         return comando
     }
 
