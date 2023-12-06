@@ -12,6 +12,7 @@ import kotlinx.coroutines.delay
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
+
 interface QueueController {
     fun insertarComando(nombre: String, funcion: suspend () -> Unit)
 
@@ -51,7 +52,6 @@ class QueueControllerImpl : QueueController {
             while (true) {
                 val command = takeFromQueue()
                 command.invoke()
-                delay(100)  // Ajusta el tiempo de espera según tus necesidades
             }
         }
     }
@@ -61,7 +61,6 @@ class QueueControllerImpl : QueueController {
             while (true) {
                 val command = takeFromQueue()
                 command.invoke()
-                delay(100)  // Ajusta el tiempo de espera según tus necesidades
             }
         }
     }

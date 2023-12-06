@@ -178,7 +178,12 @@ class UrlShortenerControllerTest {
     @Test
     fun `getQr returns Ok if key exists and qrImage is available`() {
 
-        given(shortUrlRepositoryService.findByKey("f684a3c4")).willReturn(ShortUrl(
+        // given(shortUrlRepositoryService.findByKey("f684a3c4")).willReturn(ShortUrl(
+        //     null,"f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true, 
+        //     qrImage = "secuenciaDeBytes".toByteArray())
+        // ))
+
+        given(createQrUseCase.getQrCode("f684a3c4")).willReturn(ShortUrl(
             null,"f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true, 
             qrImage = "secuenciaDeBytes".toByteArray())
         ))
@@ -189,18 +194,17 @@ class UrlShortenerControllerTest {
             .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "image/png"))
             .andExpect(content().bytes("secuenciaDeBytes".toByteArray()))
 
-        verify(shortUrlRepositoryService).findByKey("f684a3c4")
+        verify(createQrUseCase).getQrCode("f684a3c4")
     
     }
 
     @Test
     fun `getQr returns Retry_after if key exists and qrImage is not available`() {
 
-        given(shortUrlRepositoryService.findByKey("f684a3c4")).willReturn(ShortUrl(
-            null,"f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true)
-        ))
 
-        val errorResponse = "Imagen QR no disponible. Intentalo más tarde."
+        given(createQrUseCase.getQrCode("f684a3c4")).willThrow(QrNotReady("f684a3c4"))
+
+        val errorResponse = "Imagen QR no disponible. Inténtalo más tarde."
        
         mockMvc.perform(get("/{id}/qr", "f684a3c4"))
             .andDo(print())
@@ -208,19 +212,19 @@ class UrlShortenerControllerTest {
             .andExpect(header().string(HttpHeaders.RETRY_AFTER, "5"))
             .andExpect(jsonPath("$.error").value(errorResponse))
 
-        verify(shortUrlRepositoryService).findByKey("f684a3c4")
+        verify(createQrUseCase).getQrCode("f684a3c4")
     
     }
 
     @Test
     fun `getQr returns NOT_FOUND if key does not exist`() {
 
+        given(createQrUseCase.getQrCode("key")).willThrow(RedirectionNotFound("key"))
+
         mockMvc.perform(get("/{id}/qr", "key"))
             .andDo(print())
             .andExpect(status().isNotFound)
 
-        verify(createQrUseCase, never()).generateQRCode("http://localhost/key", 
-        ShortUrl(null,"key", Redirection("http://example.com/")))
     }
 
     @Test

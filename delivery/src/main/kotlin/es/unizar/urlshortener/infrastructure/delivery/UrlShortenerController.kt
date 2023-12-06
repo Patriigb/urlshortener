@@ -260,23 +260,6 @@ class UrlShortenerControllerImpl(
 
     @GetMapping("/{id}/qr")
     override fun getQr(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<Any> {
-        // Verificar si el id existe en la base de datos
-        // val shortUrl = shortUrlRepository.findByKey(id)
-        // if (shortUrl != null && shortUrl.properties.qr == true) {
-
-        //     if(shortUrl.properties.qrImage == null){
-        //         val errorResponse = mapOf("error" to "Imagen QR no disponible. Intentalo más tarde.")
-        //         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-        //             .header("Retry-After", "5")
-        //             .body(errorResponse)
-        //     }
-            
-        //     // Devolver imagen con tipo de contenido correcto
-        //     return ResponseEntity.ok().header("Content-Type", "image/png").body(shortUrl.properties.qrImage)
-        // } else {
-        //     // Devolver 404 si el id no existe
-        //     return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
-        // }
 
         try{
             val shortUrl = createQrUseCase.getQrCode(id)
@@ -284,14 +267,17 @@ class UrlShortenerControllerImpl(
             // Devolver imagen con tipo de contenido correcto
             return ResponseEntity.ok().header("Content-Type", "image/png").body(shortUrl.properties.qrImage)
         } catch (e: RedirectionNotFound) {
+            log.error(e.message)
             val errorResponse = mapOf("error" to "No se encontró la redirección con el ID especificado.")
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse)
             
         } catch (e: QrNotFound) {
+            log.error(e.message)
             val errorResponse = mapOf("error" to "El código QR no está habilitado para esta redirección.")
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse)
             
         } catch (e: QrNotReady) {
+            log.error(e.message)
             val errorResponse = mapOf("error" to "Imagen QR no disponible. Inténtalo más tarde.")
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .header("Retry-After", "5")
