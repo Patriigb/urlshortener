@@ -5,8 +5,10 @@ import kotlinx.coroutines.CoroutineScope
 import java.util.concurrent.LinkedBlockingQueue
 import org.springframework.scheduling.annotation.Async
 import org.springframework.scheduling.annotation.Scheduled
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.delay
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
@@ -44,19 +46,30 @@ class QueueControllerImpl : QueueController {
         insertarComando(nombre,funcion)
     }
 
-    @Scheduled(initialDelay = 100, fixedRate = 100)
     override fun consumerMethod() {
         CoroutineScope(Dispatchers.IO).launch {
-            val command = takeFromQueue()
-            command.invoke()
+            while (true) {
+                val command = takeFromQueue()
+                command.invoke()
+                delay(100)  // Ajusta el tiempo de espera según tus necesidades
+            }
         }
     }
 
-    @Scheduled(initialDelay = 100, fixedRate = 100)
     override fun consumerMethod2() {
         CoroutineScope(Dispatchers.IO).launch {
-            val command = takeFromQueue()
-            command.invoke()
+            while (true) {
+                val command = takeFromQueue()
+                command.invoke()
+                delay(100)  // Ajusta el tiempo de espera según tus necesidades
+            }
+        }
+    }
+
+    init {
+        runBlocking {
+            consumerMethod()
+            consumerMethod2()
         }
     }
 }

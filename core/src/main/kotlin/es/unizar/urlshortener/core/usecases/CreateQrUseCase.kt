@@ -9,6 +9,9 @@ import javax.imageio.ImageIO
 import java.awt.Color
 import java.awt.image.BufferedImage
 import java.io.ByteArrayOutputStream
+import es.unizar.urlshortener.core.RedirectionNotFound
+import es.unizar.urlshortener.core.QrNotFound
+import es.unizar.urlshortener.core.QrNotReady
 import es.unizar.urlshortener.core.ShortUrl
 import es.unizar.urlshortener.core.ShortUrlProperties
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
@@ -21,6 +24,7 @@ const val DEFAULT_MIN = 0
  */
 interface CreateQrUseCase {
     fun generateQRCode(content: String, su: ShortUrl)
+    fun getQrCode(id: String): ShortUrl
 }
 
 /**
@@ -58,5 +62,39 @@ class CreateQrUseCaseImpl(
             )
         )
         shortUrlRepository.save(newSu)
+    }
+
+    override fun getQrCode(id: String): ShortUrl{
+
+        val shortUrl = shortUrlRepository.findByKey(id)
+
+        if(shortUrl == null){
+            throw RedirectionNotFound(id)
+        } else if(shortUrl.properties.qr != true){
+            throw QrNotFound(id)
+        } else if(shortUrl.properties.qrImage == null){
+            throw QrNotReady(id)
+        } else {
+            return shortUrl
+        }
+
+        
+        // if (shortUrl != null && shortUrl.properties.qr == true) {
+
+        //     if(shortUrl.properties.qrImage == null){
+        //         val errorResponse = mapOf("error" to "Imagen QR no disponible. Intentalo más tarde.")
+        //         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+        //             .header("Retry-After", "5")
+        //             .body(errorResponse)
+        //     }
+            
+        //     // Devolver imagen con tipo de contenido correcto
+        //     return shortUrl
+        //     return ResponseEntity.ok().header("Content-Type", "image/png").body(shortUrl.properties.qrImage)
+        // } else {
+        //     // Devolver 404 si el id no existe
+        //     throw RedirectionNotFound(id)
+        //     //return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
+        // }
     }
 }
