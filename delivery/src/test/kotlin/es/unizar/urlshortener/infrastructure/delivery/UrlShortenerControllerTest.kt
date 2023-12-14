@@ -210,7 +210,7 @@ class UrlShortenerControllerTest {
 
         given(createQrUseCase.getQrCode("f684a3c4")).willThrow(QrNotReady("f684a3c4"))
 
-        val errorResponse = "Imagen QR no disponible. Inténtalo más tarde."
+        val errorResponse = "URI de destino no validada todavía"
        
         mockMvc.perform(get("/{id}/qr", "f684a3c4"))
             .andDo(print())
