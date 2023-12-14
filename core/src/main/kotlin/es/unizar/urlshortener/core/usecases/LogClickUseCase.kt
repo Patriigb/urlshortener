@@ -26,7 +26,7 @@ interface LogClickUseCase {
 class LogClickUseCaseImpl(
     private val clickRepository: ClickRepositoryService,
     private val shortUrlRepository: ShortUrlRepositoryService,
-    private val controlador: QueueController
+    private val queueController: QueueController
 ) : LogClickUseCase {
     override fun getSumary(key: String) : MultiValueMap<String, Pair<String, String>> {
         println("key: " + key)
@@ -48,7 +48,7 @@ class LogClickUseCaseImpl(
     } 
 
     private fun saveLog(cl: Click){
-        controlador.producerMethod("saveLog") {
+        queueController.producerMethod("saveLog") {
             clickRepository.save(cl)
         }
     }

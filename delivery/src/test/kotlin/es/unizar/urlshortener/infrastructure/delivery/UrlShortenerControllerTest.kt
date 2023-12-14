@@ -83,6 +83,17 @@ class UrlShortenerControllerTest {
     }
 
     @Test
+    fun `getSumary returns NOT_FOUND if id does not exist`() {
+        
+        given(logClickUseCase.getSumary("key")).willThrow(RedirectionNotFound("key"))
+
+        mockMvc.perform(get("/api/link/{id}", "key"))
+            .andExpect(status().isNotFound)
+
+        verify(logClickUseCase, times(1)).getSumary("key")
+    }
+
+    @Test
     fun `getSumary returns headers sumary if url has been accesed`() {
         val expectedInfoMap = LinkedMultiValueMap<String, Pair<String, String>>()
         expectedInfoMap.add("key", Pair("CHROME_11", "WINDOWS_10"))
@@ -178,11 +189,6 @@ class UrlShortenerControllerTest {
     @Test
     fun `getQr returns Ok if key exists and qrImage is available`() {
 
-        // given(shortUrlRepositoryService.findByKey("f684a3c4")).willReturn(ShortUrl(
-        //     null,"f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true, 
-        //     qrImage = "secuenciaDeBytes".toByteArray())
-        // ))
-
         given(createQrUseCase.getQrCode("f684a3c4")).willReturn(ShortUrl(
             null,"f684a3c4",Redirection("http://example.com/"), ShortUrlProperties(qr = true, 
             qrImage = "secuenciaDeBytes".toByteArray())
@@ -210,6 +216,23 @@ class UrlShortenerControllerTest {
             .andDo(print())
             .andExpect(status().isBadRequest)
             .andExpect(header().string(HttpHeaders.RETRY_AFTER, "5"))
+            .andExpect(jsonPath("$.error").value(errorResponse))
+
+        verify(createQrUseCase).getQrCode("f684a3c4")
+    
+    }
+
+    @Test
+    fun `getQr returns NOT_FOUND if key exists and it does not have a qr`() {
+
+
+        given(createQrUseCase.getQrCode("f684a3c4")).willThrow(QrNotFound("f684a3c4"))
+
+        val errorResponse = "El código QR no está habilitado para esta redirección."
+       
+        mockMvc.perform(get("/{id}/qr", "f684a3c4"))
+            .andDo(print())
+            .andExpect(status().isNotFound)
             .andExpect(jsonPath("$.error").value(errorResponse))
 
         verify(createQrUseCase).getQrCode("f684a3c4")

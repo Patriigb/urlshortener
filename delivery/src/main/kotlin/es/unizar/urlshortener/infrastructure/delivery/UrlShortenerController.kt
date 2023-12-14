@@ -219,9 +219,8 @@ class UrlShortenerControllerImpl(
     val logClickUseCase: LogClickUseCase,
     val createShortUrlUseCase: CreateShortUrlUseCase,
     val createQrUseCase: CreateQrUseCase,
-    val shortUrlRepository: ShortUrlRepositoryService,
     val processCsvUseCase: ProcessCsvUseCase,
-    val controlador: QueueController,
+    val queueController: QueueController,
     val metricsUseCase: MetricsUseCase
 
 ) : UrlShortenerController {
@@ -234,11 +233,15 @@ class UrlShortenerControllerImpl(
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> {
             //println("el id es: $id")
-            
-            val datos = logClickUseCase.getSumary(id)
+            try{
+                val datos = logClickUseCase.getSumary(id)
 
-            val response = Sumary(info = datos)
-            return ResponseEntity<Sumary>(response, HttpStatus.OK)
+                val response = Sumary(info = datos)
+                return ResponseEntity<Sumary>(response, HttpStatus.OK)
+            } catch (e: RedirectionNotFound) {
+                log.error(e.message)
+                return ResponseEntity.notFound().build();
+            }
     }
 
 
@@ -246,7 +249,7 @@ class UrlShortenerControllerImpl(
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest?): ResponseEntity<Unit> {
             val redirection = redirectUseCase.redirectTo(id)
 
-            controlador.producerMethod("logClick") {
+            queueController.producerMethod("logClick") {
                 logClickUseCase.logClick(
                     id, ClickProperties(ip = request?.remoteAddr), request?.getHeader("User-Agent")
                 )
@@ -274,11 +277,11 @@ class UrlShortenerControllerImpl(
         } catch (e: QrNotFound) {
             log.error(e.message)
             val errorResponse = mapOf("error" to "El código QR no está habilitado para esta redirección.")
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorResponse)
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse)
             
         } catch (e: QrNotReady) {
             log.error(e.message)
-            val errorResponse = mapOf("error" to "Imagen QR no disponible. Inténtalo más tarde.")
+            val errorResponse = mapOf("error" to "URI de destino no validada todavía")
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                 .header("Retry-After", "5")
                 .body(errorResponse)  
@@ -291,7 +294,7 @@ class UrlShortenerControllerImpl(
     @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
     fun scheduleMetricsRegistration() {
 
-        controlador.producerMethod("registerOperatingSystemMetrics") {
+        queueController.producerMethod("registerOperatingSystemMetrics") {
             metricsUseCase.registerOperatingSystemMetrics()
         }
 
@@ -300,7 +303,7 @@ class UrlShortenerControllerImpl(
     @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
     fun scheduleMetricsRegistration2() {
 
-        controlador.producerMethod("registerShortUrlsCount") {
+        queueController.producerMethod("registerShortUrlsCount") {
             metricsUseCase.registerShortUrlsCount()
         }
 
@@ -365,7 +368,7 @@ class UrlShortenerControllerImpl(
             val response = if (data.generateQr == true) {
                 val urlQr = "$url/qr"
 
-                controlador.producerMethod("generateQRCode") {
+                queueController.producerMethod("generateQRCode") {
                     createQrUseCase.generateQRCode(urlQr, it)
                 }
 
@@ -433,7 +436,7 @@ class UrlShortenerControllerImpl(
                 )
                 if (checkQr && qr != null) {
                         urlQr = "$shortenedUri/qr"
-                        controlador.producerMethod("generateQRCode") {
+                        queueController.producerMethod("generateQRCode") {
                             createQrUseCase.generateQRCode(urlQr, shortUrl)
                         }
                 }
@@ -472,7 +475,7 @@ class UrlShortenerControllerImpl(
 
                     if (checkQr) {
                         val urlQr = "$shortenedUri/qr"
-                        controlador.producerMethod("generateQRCode") {
+                        queueController.producerMethod("generateQRCode") {
                             createQrUseCase.generateQRCode(urlQr, shortUrl)
                         }
                         "$originalUri >>> $shortenedUri >>> $urlQr"
