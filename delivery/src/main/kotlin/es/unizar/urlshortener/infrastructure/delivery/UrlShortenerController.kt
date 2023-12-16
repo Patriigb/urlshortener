@@ -10,7 +10,6 @@ import es.unizar.urlshortener.core.QrNotFound
 import es.unizar.urlshortener.core.QrNotReady
 import es.unizar.urlshortener.core.QueueController
 import es.unizar.urlshortener.core.ShortUrlProperties
-import es.unizar.urlshortener.core.ShortUrlRepositoryService
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
 import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
@@ -18,11 +17,9 @@ import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import es.unizar.urlshortener.core.usecases.MetricsUseCase
 import jakarta.servlet.http.HttpServletRequest
-import jakarta.servlet.http.HttpSession
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
 import org.springframework.context.annotation.Configuration
-import org.springframework.context.event.EventListener
 import org.springframework.hateoas.server.mvc.linkTo
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
@@ -34,10 +31,8 @@ import org.springframework.http.server.ServletServerHttpRequest
 import org.springframework.messaging.handler.annotation.MessageMapping
 import org.springframework.messaging.simp.SimpMessageHeaderAccessor
 import org.springframework.messaging.simp.SimpMessagingTemplate
-import org.springframework.messaging.simp.annotation.SendToUser
 import org.springframework.messaging.simp.annotation.SubscribeMapping
 import org.springframework.messaging.simp.config.MessageBrokerRegistry
-import org.springframework.messaging.simp.stomp.StompHeaderAccessor
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -52,15 +47,15 @@ import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
-import org.springframework.web.socket.messaging.SessionSubscribeEvent
 import org.springframework.web.socket.server.HandshakeInterceptor
 import java.io.StringReader
 import java.io.StringWriter
+import java.net.Inet6Address
+import java.net.InetAddress
 import java.net.URI
 import java.net.http.HttpClient
 import java.net.http.HttpRequest
 import java.net.http.HttpResponse
-import java.security.Principal
 
 
 const val OK = 200
@@ -145,17 +140,6 @@ data class CsvDataIn(
     val sponsor: String? = null
 )
 
-
-data class ServerMessage(
-    val type: String? = null,
-    val body: String? = null
-)
-
-data class WsData(
-    val urls: List<String>,
-    val generateQr: Boolean
-)
-
 /**
  * Data returned after the creation of a short url from a csv file.
  */
@@ -164,47 +148,6 @@ data class ShortInfo(
     val shortenedUri: URI,
     val errorMessage: String
 )
-
-class RemoteAddressHandshakeInterceptor : HandshakeInterceptor {
-    private val log = LoggerFactory.getLogger(this::class.java)
-
-    override fun beforeHandshake(
-        request: ServerHttpRequest,
-        response: ServerHttpResponse,
-        wsHandler: WebSocketHandler,
-        attributes: MutableMap<String, Any>
-    ): Boolean {
-        // Obtener la dirección remota del cliente desde la solicitud y almacenarla como un atributo de la sesión
-        attributes["remoteAddr"] = request.remoteAddress.address.hostAddress
-        val servletRequest = request as ServletServerHttpRequest
-        attributes["sessionId"] = servletRequest.servletRequest.session.id
-
-        return true
-    }
-    override fun afterHandshake(
-        request: ServerHttpRequest,
-        response: ServerHttpResponse,
-        wsHandler: WebSocketHandler,
-        exception: Exception?
-    ) {
-        log.info("WebSocket handshake completed successfully.")
-    }
-}
-
-@Configuration
-@EnableWebSocketMessageBroker
-class WebSocketConfig : WebSocketMessageBrokerConfigurer {
-    override fun configureMessageBroker(config: MessageBrokerRegistry) {
-        config.enableSimpleBroker("/topic", "/queue")
-        config.setApplicationDestinationPrefixes("/app","/user")
-    }
-
-    override fun registerStompEndpoints(registry: StompEndpointRegistry) {
-        registry.addEndpoint("/api/fast-bulk")
-            .withSockJS()
-            .setInterceptors(RemoteAddressHandshakeInterceptor())
-    }
-}
 
 /**
  * The implementation of the controller.
@@ -224,9 +167,6 @@ class UrlShortenerControllerImpl(
     val metricsUseCase: MetricsUseCase
 
 ) : UrlShortenerController {
-
-    @Autowired
-    private lateinit var messagingTemplate: SimpMessagingTemplate
 
     private val log = LoggerFactory.getLogger(this::class.java)
 
@@ -415,7 +355,7 @@ class UrlShortenerControllerImpl(
             val uri = line[0]
             val qr = if (checkQr && line.size > 1 && line[1].isNotBlank()) line[1] else null
 
-            val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, data, request, false, null)
+            val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, data, request, false, null, null)
             if (firstUri) {
                 h.location = shortenedUri
                 if (checkQr) {
@@ -451,64 +391,16 @@ class UrlShortenerControllerImpl(
         return ResponseEntity(resultCsv.toString(), h, HttpStatus.CREATED)
     }
 
-    @MessageMapping("/csv")
-    fun fastBulk(data: WsData, accessor: SimpMessageHeaderAccessor) {
-
-        val uris = data.urls
-        val checkQr = data.generateQr
-        val remoteAddr = accessor.sessionAttributes?.get("remoteAddr").toString()
-        val username = "user${accessor.sessionId}"
-        log.info("Mensaje recibido de $username")
-
-        for (uri in uris) {
-            val (originalUri, shortenedUri, errorMessage) = shortUrl(uri, null, null, true, remoteAddr)
-            var msg : String
-            if (errorMessage.isBlank()) {
-                val result = runCatching {
-                    val shortUrl = createShortUrlUseCase.create(
-                        url = originalUri,
-                        data = ShortUrlProperties(
-                            ip = remoteAddr,
-                            qr = checkQr
-                        )
-                    )
-
-                    if (checkQr) {
-                        val urlQr = "$shortenedUri/qr"
-                        queueController.producerMethod("generateQRCode") {
-                            createQrUseCase.generateQRCode(urlQr, shortUrl)
-                        }
-                        "$originalUri >>> $shortenedUri >>> $urlQr"
-                    } else {
-                        "$originalUri >>> $shortenedUri"
-                    }
-                }
-
-                msg = result.getOrElse {
-                    "Ha ocurrido un error: ${it.message}"
-                }
-            } else {
-                msg = "Ha ocurrido un error: $errorMessage"
-            }
-            messagingTemplate.convertAndSend("/queue/csv-$username", ServerMessage("server", msg))
-        }
-    }
-
-    @SubscribeMapping("/queue/csv")
-    fun handleSubscribeEvent() : ServerMessage {
-        log.info("Suscripcion")
-        return ServerMessage("server","¡Hola! Escribe una o varias urls separadas por espacios.")
-    }
-
     /**
      * Creates a short url from a [uri].
      * @return a [ShortInfo] with the original uri, the shortened uri and an error message if any.
      */
-    private fun shortUrl( uri: String, data: CsvDataIn?, request: HttpServletRequest?,
-                          isWs: Boolean, remoteAddr: String?): ShortInfo{
+    fun shortUrl(uri: String, data: CsvDataIn?, request: HttpServletRequest?,
+                 isWs: Boolean, localAddr: InetAddress?, port: String?): ShortInfo {
         try {
             val shortUrlDataIn = ShortUrlDataIn(uri, data?.sponsor, false)
-            val ip = if (isWs) remoteAddr else request?.remoteAddr
+            val ip = if (isWs) localAddr.toString().removePrefix("/") else request?.remoteAddr
+            log.info(ip)
 
             val response = createShortUrlUseCase.create(
                 url = shortUrlDataIn.url,
@@ -518,7 +410,8 @@ class UrlShortenerControllerImpl(
                 )
             )
 
-            val shortenedUri = URI("http://localhost:8080").resolve(
+            val ipUri = if (localAddr is Inet6Address) "[$ip]:$port" else ip
+            val shortenedUri = URI("http://$ipUri").resolve(
                 linkTo<UrlShortenerControllerImpl> { redirectTo(response.hash, request) }.toUri())
             val errorMessage = if (response.properties.safe) "" else "ERROR"
 

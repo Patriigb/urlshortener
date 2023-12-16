@@ -22,7 +22,7 @@ class UrlShortenerControllerWsTest {
 
     @Test
     fun websocketTest() {
-        val latch = CountDownLatch(2)
+        val latch = CountDownLatch(4)
         val list = mutableListOf<String>()
         val stompClient = WebSocketStompClient(SockJsClient(listOf(WebSocketTransport(StandardWebSocketClient()))))
         val stompSession: StompSession = stompClient.connectAsync(
@@ -45,16 +45,29 @@ class UrlShortenerControllerWsTest {
                 }
             }
         )
-        val msg = """{"urls": ["http://example.com/"], "generateQr": false}"""
+        var msg = """{"urls": ["http://example.com/"], "generateQr": false}"""
+        stompSession.send("/app/csv", msg.toByteArray())
+        msg = """{"urls": ["http://www.unizar.com/"], "generateQr": true}"""
+        stompSession.send("/app/csv", msg.toByteArray())
+        msg = """{"urls": ["a"], "generateQr": false}"""
         stompSession.send("/app/csv", msg.toByteArray())
         latch.await()
-        assertTrue(list.size >= 2)
+        assertTrue(list.size >= 4)
         assertTrue(list.contains(
             """{"type":"server","body":"¡Hola! Escribe una o varias urls separadas por espacios."}"""
         ))
         assertTrue(list.contains(
-            """{"type":"server","body":"http://example.com/ >>> http://localhost:8080/f684a3c4"}"""
+            """{"type":"server","body":"http://example.com/ >>> http://127.0.0.1/f684a3c4"}"""
         ))
+        val uri = "http://127.0.0.1/b8580acd"
+        assertTrue(list.contains(
+            """{"type":"server","body":"http://www.unizar.com/ >>> $uri >>> $uri/qr"}"""
+        ))
+        assertTrue(list.contains(
+            """{"type":"server","body":"Ha ocurrido un error: [a] does not follow a supported schema"}"""
+        ))
+
+        Thread.sleep(5000)
         stompSession.disconnect()
     }
 }

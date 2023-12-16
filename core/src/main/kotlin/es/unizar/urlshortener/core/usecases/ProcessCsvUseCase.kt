@@ -2,7 +2,11 @@
 package es.unizar.urlshortener.core.usecases
 
 import com.opencsv.CSVReader
+import es.unizar.urlshortener.core.ShortUrlProperties
 import java.io.StringReader
+import java.net.Inet6Address
+import java.net.InetAddress
+import java.net.URI
 
 const val BAD_REQUEST = 400
 const val OK = 200

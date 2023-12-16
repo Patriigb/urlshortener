@@ -60,9 +60,6 @@ class UrlShortenerControllerTest {
     private lateinit var queueController: QueueController
 
     @MockBean
-    private lateinit var messagingTemplate: SimpMessagingTemplate
-
-    @MockBean
     private lateinit var metricsUseCase: MetricsUseCase
 
     @MockBean
@@ -116,13 +113,15 @@ class UrlShortenerControllerTest {
     @Test
     fun `createCsv returns a CSV file with shortened URIs`() {
         val csvDataIn = MockMultipartFile(
-            "file", "test.csv", "text/csv", "URI\nhttp://example.com".toByteArray()
+            "file", "test.csv", "text/csv", "URI\nhttp://example.com\nUriIncorrecta".toByteArray()
         )
 
-        given(processCsvUseCase.checkCsvContent("URI\nhttp://example.com"))
-            .willReturn(CsvContent(0, listOf("URI", "http://example.com")))
+        given(processCsvUseCase.checkCsvContent("URI\nhttp://example.com\nUriIncorrecta"))
+            .willReturn(CsvContent(0, listOf("URI", "http://example.com", "UriIncorrecta")))
         given(createShortUrlUseCase.create("http://example.com", ShortUrlProperties(ip = "127.0.0.1")))
             .willReturn(ShortUrl(null,"f684a3c4", Redirection("http://example.com")))
+        given(createShortUrlUseCase.create("UriIncorrecta", ShortUrlProperties(ip = "127.0.0.1")))
+            .willAnswer { throw InvalidUrlException("UriIncorrecta") }
 
         val response = mockMvc.perform(
             MockMvcRequestBuilders.multipart("/api/bulk")
@@ -139,6 +138,38 @@ class UrlShortenerControllerTest {
         val csvWriter = CSVWriter(expectedCsv)
         csvWriter.writeNext(arrayOf("URI", "URI_Recortada", "Mensaje"), false)
         csvWriter.writeNext(arrayOf("http://example.com","http://localhost/f684a3c4", ""), false)
+        csvWriter.writeNext(arrayOf("UriIncorrecta","", "[UriIncorrecta] does not follow a supported schema"), false)
+
+        assertEquals(expectedCsv.toString(), response.response.contentAsString)
+    }
+
+    @Test
+    fun `createCsv returns a CSV file with shortened URIs and QRs`() {
+        val csvDataIn = MockMultipartFile(
+            "file", "test.csv", "text/csv", "URI,QR\nhttp://example.com,ok".toByteArray()
+        )
+
+        given(processCsvUseCase.checkCsvContent("URI,QR\nhttp://example.com,ok"))
+            .willReturn(CsvContent(1, listOf("URI,QR", "http://example.com,ok")))
+        given(createShortUrlUseCase.create("http://example.com", ShortUrlProperties(ip = "127.0.0.1")))
+            .willReturn(ShortUrl(null,"f684a3c4", Redirection("http://example.com")))
+
+        val response = mockMvc.perform(
+            MockMvcRequestBuilders.multipart("/api/bulk")
+                .file(csvDataIn)
+        )
+            .andDo(print())
+            .andExpect(status().isCreated)
+            .andExpect(header().string(HttpHeaders.CONTENT_TYPE, "text/csv"))
+            .andExpect(header().string(HttpHeaders.LOCATION, "http://localhost/f684a3c4"))
+            .andReturn()
+
+        val expectedCsv = StringWriter()
+        val csvWriter = CSVWriter(expectedCsv)
+        csvWriter.writeNext(arrayOf("URI", "URI_Recortada", "URI_QR", "Mensaje"), false)
+        csvWriter.writeNext(arrayOf(
+            "http://example.com","http://localhost/f684a3c4", "http://localhost/f684a3c4/qr", ""), false
+        )
 
         assertEquals(expectedCsv.toString(), response.response.contentAsString)
     }
