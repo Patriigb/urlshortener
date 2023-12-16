@@ -195,7 +195,8 @@ $(document).ready(
             // Crear un contenedor para los botones y aplicar estilos
             var buttonContainer = $("<div class='button-container'></div>");
             resultContainer.append(buttonContainer);
-            var metrics = [ "disk.total", "jvm.memory.used", "system.cpu.usage"]
+            var metrics = [  "jvm.threads.states", "operating.system.count",
+                "process.cpu.usage", "short.url.count"]
 
             // Crear botones para cada métrica y agregarlos al contenedor
             for (var i = 0; i < data.names.length; i++) {

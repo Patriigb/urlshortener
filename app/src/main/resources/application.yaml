@@ -11,7 +11,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: "*"
+        include: "metrics"
+      base-path: /api/stats
+      path-mapping:
+        metrics: /metrics
 springdoc:
   swagger-ui:
     path: /swagger-ui.html

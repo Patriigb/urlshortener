@@ -4,7 +4,7 @@ package es.unizar.urlshortener.core.usecases
 
 import es.unizar.urlshortener.core.ClickRepositoryService
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
-import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.*
 import org.slf4j.LoggerFactory
 
 
@@ -23,20 +23,30 @@ class MetricsUseCaseImpl (
     private val shortUrlRepositoryService: ShortUrlRepositoryService,
     private val registry: MeterRegistry
 ) : MetricsUseCase {
-    // private val operatingSystemsCounter: Counter = Counter.builder("operating_systems_count")
-    //     .description("Count of Different Operating Systems")
-    //     .register(registry)
 
-    // init {
-    //     registerOperatingSystemMetrics()
-    // }
-    // override fun findAllOperatingSystems(): List<String> {
-    //     return clickRepositoryService.findAllOperatingSystems().distinct()
-    // }
-
-    //private val operatingSystemsCount: MutableMap<String, Int> = mutableMapOf()
     private val log = LoggerFactory.getLogger(this::class.java)
 
+    override fun registerOperatingSystemMetrics() {
+        val metricSO = "operating.system.count"
+        val operatingSystems = clickRepositoryService.findAllOperatingSystems()
+        val operatingSystemsDistinct = operatingSystems.distinct()
+        // Numero total de SO distintos
+        val total = operatingSystemsDistinct.count()
+
+        // Valor actual del contador
+        val contador = registry.find(metricSO).counter()
+        val valueCounter = contador?.count() ?: 0.0
+
+        // incrementamos el valor del numero de sistemas operativos distintos
+        val dif = total - valueCounter
+        contador?.increment(dif)
+
+        if (contador != null) {
+            log.info("Valor del counter $metricSO: ${contador.count()}")
+        }
+    }
+
+    /*
     override fun registerOperatingSystemMetrics() {
         val operatingSystems = clickRepositoryService.findAllOperatingSystems()
         val operatingSystemsDistinct = operatingSystems.distinct()
@@ -68,22 +78,18 @@ class MetricsUseCaseImpl (
             )
         }
     }
+     */
 
     override fun registerShortUrlsCount(){
-        val metricUrls = "short.urls.count"
-        val count = shortUrlRepositoryService.countShortUrls()
-        try {
-            registry.removeByPreFilterId(registry.get(metricUrls).meter().id)
-            registry.gauge(
-                metricUrls,
-                count.toDouble()
-            )
-        } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
-            // Handle MeterNotFoundException
-            log.debug("Caught MeterNotFoundException: ${e.message}")
+        val metricUrls = "short.url.count"
+        val tam = shortUrlRepositoryService.countShortUrls()
+        val counter = registry.find(metricUrls).counter()
+        val valueCounter = counter?.count() ?: 0.0
+        val dif = tam - valueCounter
+        counter?.increment(dif)
+        if (counter != null) {
+            log.info("Valor del counter short.urls.count: ${counter.count()}")
         }
-
-        //println("SHORT URLS COUNT $count")
     }
 
 }

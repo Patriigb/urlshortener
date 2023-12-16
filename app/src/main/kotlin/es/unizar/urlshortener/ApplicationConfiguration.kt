@@ -2,23 +2,20 @@
 
 package es.unizar.urlshortener
 
-import es.unizar.urlshortener.core.usecases.CreateQrUseCaseImpl
-import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCaseImpl
-import es.unizar.urlshortener.core.usecases.LogClickUseCaseImpl
-import es.unizar.urlshortener.core.usecases.MetricsUseCaseImpl
-import es.unizar.urlshortener.core.usecases.ProcessCsvUseCaseImpl
-import es.unizar.urlshortener.core.usecases.RedirectUseCaseImpl
-import es.unizar.urlshortener.core.QueueControllerImpl
 import es.unizar.urlshortener.core.QueueController
-import io.micrometer.core.instrument.MeterRegistry
-
+import es.unizar.urlshortener.core.QueueControllerImpl
+import es.unizar.urlshortener.core.usecases.*
 import es.unizar.urlshortener.infrastructure.delivery.HashServiceImpl
 import es.unizar.urlshortener.infrastructure.delivery.ValidatorServiceImpl
 import es.unizar.urlshortener.infrastructure.repositories.ClickEntityRepository
 import es.unizar.urlshortener.infrastructure.repositories.ClickRepositoryServiceImpl
 import es.unizar.urlshortener.infrastructure.repositories.ShortUrlEntityRepository
 import es.unizar.urlshortener.infrastructure.repositories.ShortUrlRepositoryServiceImpl
+import io.micrometer.core.instrument.Meter
+import io.micrometer.core.instrument.MeterRegistry
+import io.micrometer.core.instrument.config.MeterFilter
 import org.springframework.beans.factory.annotation.Autowired
+import org.springframework.boot.actuate.autoconfigure.metrics.MeterRegistryCustomizer
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
 import org.springframework.scheduling.annotation.EnableAsync
@@ -74,5 +71,22 @@ class ApplicationConfiguration(
     @Bean 
     fun metricsUseCase(registry: MeterRegistry) =
         MetricsUseCaseImpl(clickRepositoryService(), shortUrlRepositoryService(), registry)
+
+    @Bean
+    fun metricsCustom(): MeterRegistryCustomizer<MeterRegistry> {
+        return MeterRegistryCustomizer { registry ->
+            registry.counter("operating.system.count")
+            registry.counter("short.url.count")
+            //registry.gauge("short.urls.count", 0.0)
+            registry.config().meterFilter(MeterFilter.denyUnless { id: Meter.Id ->
+                id.name.startsWith("jvm.threads.states")
+                        || id.name == "process.cpu.usage"
+                        || id.name == "operating.*"
+                        || id.name == "short.urls.count"
+            })
+
+        }
+    }
     
 }
+

@@ -16,6 +16,7 @@ import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import es.unizar.urlshortener.core.usecases.MetricsUseCase
+import io.micrometer.core.instrument.Gauge
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
 import org.springframework.beans.factory.annotation.Autowired
@@ -47,7 +48,7 @@ import org.springframework.web.socket.WebSocketHandler
 import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
 import org.springframework.web.socket.config.annotation.StompEndpointRegistry
 import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
-import org.springframework.web.socket.server.HandshakeInterceptor
+import io.micrometer.core.instrument.MeterRegistry
 import java.io.StringReader
 import java.io.StringWriter
 import java.net.Inet6Address
@@ -98,12 +99,12 @@ interface UrlShortenerController {
     /**
      * Gets the metrics of the system.
      */
-    fun getMetrics(request: HttpServletRequest): ResponseEntity<Any>
+    // fun getMetrics(request: HttpServletRequest): ResponseEntity<Any>
 
     /*
     * Gets a specific metric
     * */
-    fun getMetric(id: String, request: HttpServletRequest): ResponseEntity<Any>
+    // fun getMetric(id: String, request: HttpServletRequest): ResponseEntity<Any>
     
 }
 
@@ -228,8 +229,8 @@ class UrlShortenerControllerImpl(
         }
     }
 
-    // @Autowired
-    // private val metricsUseCase: MetricsUseCase = MetricsUseCaseImpl(metricsController.registry)
+
+
 
     @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
     fun scheduleMetricsRegistration() {
@@ -239,7 +240,6 @@ class UrlShortenerControllerImpl(
         }
 
     }
-
     @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
     fun scheduleMetricsRegistration2() {
 
@@ -249,6 +249,7 @@ class UrlShortenerControllerImpl(
 
     }
 
+    /*
     @GetMapping("/api/stats/metrics")
     override fun getMetrics(request: HttpServletRequest): ResponseEntity<Any> {
 
@@ -270,13 +271,13 @@ class UrlShortenerControllerImpl(
 
     }
 
+
     @GetMapping("/api/stats/metrics/{id}")
     override fun getMetric(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<Any> {
         // Obtén la URI actual de la solicitud
         val currentUri = URI.create(request.requestURL.toString())
         val uriMetric = URI("${currentUri.scheme}://${currentUri.host}:${currentUri.port}/actuator/metrics/${id}")
 
-        //println("URIIIIIII    $uriMetric")
         val client = HttpClient.newBuilder().build()
         val httpRequest = HttpRequest.newBuilder()
             .uri(uriMetric)
@@ -289,6 +290,7 @@ class UrlShortenerControllerImpl(
         }
         return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
     }
+     */
 
     @PostMapping("/api/link", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     override fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut> =
