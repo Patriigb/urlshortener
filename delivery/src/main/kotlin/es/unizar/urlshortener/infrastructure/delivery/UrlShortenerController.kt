@@ -1,39 +1,33 @@
-@file:Suppress("LongParameterList", "TooGenericExceptionCaught", "TooManyFunctions", "ReturnCount")
+@file:Suppress("LongParameterList", "TooManyFunctions", "ReturnCount")
 
 package es.unizar.urlshortener.infrastructure.delivery
 
 import com.opencsv.CSVReader
 import com.opencsv.CSVWriter
 import es.unizar.urlshortener.core.ClickProperties
-import es.unizar.urlshortener.core.RedirectionNotFound
 import es.unizar.urlshortener.core.QrNotFound
 import es.unizar.urlshortener.core.QrNotReady
-import es.unizar.urlshortener.core.QueueController
 import es.unizar.urlshortener.core.ShortUrlProperties
+import es.unizar.urlshortener.core.RedirectionNotFound
+import es.unizar.urlshortener.core.InvalidUrlException
+import es.unizar.urlshortener.core.QueueController
 import es.unizar.urlshortener.core.usecases.CreateShortUrlUseCase
 import es.unizar.urlshortener.core.usecases.CreateQrUseCase
 import es.unizar.urlshortener.core.usecases.ProcessCsvUseCase
 import es.unizar.urlshortener.core.usecases.LogClickUseCase
 import es.unizar.urlshortener.core.usecases.RedirectUseCase
 import es.unizar.urlshortener.core.usecases.MetricsUseCase
-import io.micrometer.core.instrument.Gauge
+import io.swagger.v3.oas.annotations.Operation
+import io.swagger.v3.oas.annotations.media.Content
+import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.responses.ApiResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
-import org.springframework.beans.factory.annotation.Autowired
-import org.springframework.context.annotation.Configuration
 import org.springframework.hateoas.server.mvc.linkTo
 import org.springframework.http.HttpHeaders
 import org.springframework.http.HttpStatus
 import org.springframework.http.MediaType
 import org.springframework.http.ResponseEntity
-import org.springframework.http.server.ServerHttpRequest
-import org.springframework.http.server.ServerHttpResponse
-import org.springframework.http.server.ServletServerHttpRequest
-import org.springframework.messaging.handler.annotation.MessageMapping
-import org.springframework.messaging.simp.SimpMessageHeaderAccessor
-import org.springframework.messaging.simp.SimpMessagingTemplate
-import org.springframework.messaging.simp.annotation.SubscribeMapping
-import org.springframework.messaging.simp.config.MessageBrokerRegistry
 import org.springframework.scheduling.annotation.EnableScheduling
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
@@ -44,20 +38,11 @@ import org.springframework.web.bind.annotation.PathVariable
 import org.springframework.web.bind.annotation.PostMapping
 import org.springframework.web.bind.annotation.RestController
 import org.springframework.web.multipart.MultipartFile
-import org.springframework.web.socket.WebSocketHandler
-import org.springframework.web.socket.config.annotation.EnableWebSocketMessageBroker
-import org.springframework.web.socket.config.annotation.StompEndpointRegistry
-import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerConfigurer
-import io.micrometer.core.instrument.MeterRegistry
 import java.io.StringReader
 import java.io.StringWriter
 import java.net.Inet6Address
 import java.net.InetAddress
 import java.net.URI
-import java.net.http.HttpClient
-import java.net.http.HttpRequest
-import java.net.http.HttpResponse
-
 
 const val OK = 200
 const val BAD_REQUEST = 400
@@ -112,6 +97,7 @@ interface UrlShortenerController {
  * Data required to get the summary of a short url.
  */
 data class Sumary(
+    @Schema(description = "Información relacionada con la URL")
     val info: MultiValueMap<String, Pair<String, String>> =  LinkedMultiValueMap()
 )
 
@@ -119,8 +105,11 @@ data class Sumary(
  * Data required to create a short url.
  */
 data class ShortUrlDataIn(
+    @Schema(description = "URL original que se acortará", required = true)
     val url: String,
+    @Schema(description = "Información del sponsor")
     val sponsor: String? = null,
+    @Schema(description = "Para generar o no un código QR")
     val generateQr: Boolean?
 )
 
@@ -128,8 +117,11 @@ data class ShortUrlDataIn(
  * Data returned after the creation of a short url.
  */
 data class ShortUrlDataOut(
+    @Schema(description = "URL acortada")
     val url: URI? = null,
+    @Schema(description = "Propiedades adicionales relacionadas con la URL corta")
     val properties: Map<String, Any?> = emptyMap(),
+    @Schema(description = "Código QR asociado con la URL corta")
     val qr: String? = null
 )
 
@@ -137,7 +129,9 @@ data class ShortUrlDataOut(
  * Data required to create a short url from a csv file.
  */
 data class CsvDataIn(
+    @Schema(description = "Archivo CSV que contiene las URL que se acortarán", required = true)
     val file: MultipartFile,
+    @Schema(description = "Información del sponsor")
     val sponsor: String? = null
 )
 
@@ -145,8 +139,11 @@ data class CsvDataIn(
  * Data returned after the creation of a short url from a csv file.
  */
 data class ShortInfo(
+    @Schema(description = "URL original")
     val originalUri: String,
+    @Schema(description = "URL acortada")
     val shortenedUri: URI,
+    @Schema(description = "Mensaje de error, si lo hay")
     val errorMessage: String
 )
 
@@ -171,9 +168,19 @@ class UrlShortenerControllerImpl(
 
     private val log = LoggerFactory.getLogger(this::class.java)
 
+
+    @Operation(
+        summary = "Obtiene la información para una URI específica",
+        description = "Obtiene el resumen de información correspondiente al ID de la URI proporcionada.",
+        responses = [
+            ApiResponse(responseCode = "200", description = "Éxito en la obtención del resumen",
+                        content = [Content(mediaType = "application/json")]),
+            ApiResponse(responseCode = "404", description = "URI no encontrada"),
+            ApiResponse(responseCode = "400", description = "Todavía no se puede redireccionar")
+        ]
+    )
     @GetMapping("/api/link/{id}")
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> {
-            //println("el id es: $id")
             try{
                 val datos = logClickUseCase.getSumary(id)
 
@@ -185,7 +192,15 @@ class UrlShortenerControllerImpl(
             }
     }
 
-
+    @Operation(
+        summary = "Redirige a la URL especificada",
+        description = "Redirige a la URL correspondiente al ID proporcionado.",
+        responses = [
+            ApiResponse(responseCode = "200", description = "Redirección exitosa"),
+            ApiResponse(responseCode = "404", description = "ID no encontrado",
+                content = [Content()])
+        ]
+    )
     @GetMapping("/{id:(?!api|index).*}")
     override fun redirectTo(@PathVariable id: String, request: HttpServletRequest?): ResponseEntity<Unit> {
             val redirection = redirectUseCase.redirectTo(id)
@@ -202,6 +217,18 @@ class UrlShortenerControllerImpl(
             return ResponseEntity<Unit>(headers, HttpStatus.valueOf(redirection.mode))
     }
 
+    @Operation(
+        summary = "Obtiene el código QR para una URI específica",
+        description = "Obtiene el código QR correspondiente al ID proporcionado.",
+        responses = [
+            ApiResponse(responseCode = "200", description = "Éxito en la obtención del código QR",
+                        content = [Content(mediaType = "image/png")]),
+            ApiResponse(responseCode = "404", description = "ID no encontrado o código QR no habilitado",
+                        content = [Content()]),
+            ApiResponse(responseCode = "400", description = "URI de destino no validada todavía",
+                        content = [Content()])
+        ]
+    )
     @GetMapping("/{id}/qr")
     override fun getQr(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<Any> {
 
@@ -229,10 +256,7 @@ class UrlShortenerControllerImpl(
         }
     }
 
-
-
-
-    @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
+    @Scheduled(fixedRate = 10000)
     fun scheduleMetricsRegistration() {
 
         queueController.producerMethod("registerOperatingSystemMetrics") {
@@ -240,7 +264,7 @@ class UrlShortenerControllerImpl(
         }
 
     }
-    @Scheduled(fixedRate = 10000) // Ejemplo: Cada diez segundos
+    @Scheduled(fixedRate = 10000)
     fun scheduleMetricsRegistration2() {
 
         queueController.producerMethod("registerShortUrlsCount") {
@@ -292,6 +316,16 @@ class UrlShortenerControllerImpl(
     }
      */
 
+    @Operation(
+        summary = "Acorta una URL y genera un código QR opcionalmente",
+        description = "Crea una URL corta para la URL proporcionada, con la opción de generar un código QR.",
+        responses = [
+            ApiResponse(responseCode = "201", description = "URL corta creada exitosamente",
+                        content = [Content(mediaType = "application/json")]),
+            ApiResponse(responseCode = "400", description = "Error en la solicitud o datos inválidos",
+                        content = [Content(mediaType = "application/json")])
+        ]
+    )
     @PostMapping("/api/link", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
     override fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut> =
         createShortUrlUseCase.create(
@@ -306,7 +340,6 @@ class UrlShortenerControllerImpl(
             val url = linkTo<UrlShortenerControllerImpl> { redirectTo(it.hash, request) }.toUri()
             h.location = url
 
-            // url del qr más /qr
             val response = if (data.generateQr == true) {
                 val urlQr = "$url/qr"
 
@@ -334,6 +367,17 @@ class UrlShortenerControllerImpl(
             ResponseEntity<ShortUrlDataOut>(response, h, HttpStatus.CREATED)
         }
 
+    @Operation(
+        summary = "Procesa un archivo CSV para crear múltiples URL cortas",
+        description = "Procesa un archivo CSV que contiene URIs para crear múltiples URL cortas, y opcionalmente QRs.",
+        responses = [
+            ApiResponse(responseCode = "201", description = "URLs cortas creadas exitosamente",
+                        content = [Content(mediaType = "text/csv")]),
+            ApiResponse(responseCode = "400", description = "Error en la solicitud o datos inválidos",
+                        content = [Content(mediaType = "application/json")]),
+            ApiResponse(responseCode = "200", description = "El fichero está vacío")
+        ]
+    )
     @PostMapping("/api/bulk", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     override fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String> {
         val csvContent = data.file.bytes.toString(Charsets.UTF_8)
@@ -418,10 +462,10 @@ class UrlShortenerControllerImpl(
             val errorMessage = if (response.properties.safe) "" else "ERROR"
 
             return ShortInfo(uri, shortenedUri, errorMessage)
-        } catch (e: Exception) {
-            val shortenedUri = URI("")
-            val errorMessage = e.message ?: "ERROR"
-            return ShortInfo(uri, shortenedUri, errorMessage)
+        } catch (e: InvalidUrlException) {
+            return ShortInfo(uri, URI(""), e.message ?: "Invalid Url")
+        } catch (e: RedirectionNotFound) {
+            return ShortInfo(uri, URI(""), e.message ?: "Redirection Not Found")
         }
     }
 }
