@@ -33,15 +33,15 @@ class UrlShortenerControllerHttpTest {
             .get("/api/stats/metrics")
             .then()
             .statusCode(HttpStatus.OK.value())
-            .contentType("application/json")
+            .contentType("application/vnd.spring-boot.actuator.v3+json")
             .body("names", notNullValue()) // Verifica que 'names' no sea nulo
             .body("names", hasItems(isA(String::class.java))) // Verifica que 'names' contenga solo cadenas
 
     }
 
     @Test
-    fun `get specific metric jvm memory used and is ok`() {
-        val metricName = "jvm.memory.used"
+    fun `get metric jvm threads states and is ok`() {
+        val metricName = "jvm.threads.states"
 
         given()
             .contentType(ContentType.JSON)
@@ -49,14 +49,62 @@ class UrlShortenerControllerHttpTest {
             .get("/api/stats/metrics/$metricName")
             .then()
             .statusCode(HttpStatus.OK.value())
-            .contentType("application/json")
+            .contentType("application/vnd.spring-boot.actuator.v3+json")
             .body("name", equalTo(metricName))
 
 
     }
 
     @Test
-    fun `get specific metric returns NOT_FOUND if metric does not exists`() {
+    fun `get metric process cpu usage and is ok`() {
+        val metricName = "process.cpu.usage"
+
+        given()
+            .contentType(ContentType.JSON)
+            .`when`()
+            .get("/api/stats/metrics/$metricName")
+            .then()
+            .statusCode(HttpStatus.OK.value())
+            .contentType("application/vnd.spring-boot.actuator.v3+json")
+            .body("name", equalTo(metricName))
+
+
+    }
+
+    @Test
+    fun `get metric operating system count and is ok`() {
+        val metricName = "operating.system.count"
+
+        given()
+            .contentType(ContentType.JSON)
+            .`when`()
+            .get("/api/stats/metrics/$metricName")
+            .then()
+            .statusCode(HttpStatus.OK.value())
+            .contentType("application/vnd.spring-boot.actuator.v3+json")
+            .body("name", equalTo(metricName))
+
+
+    }
+
+    @Test
+    fun `get metric short url count and is ok`() {
+        val metricName = "short.url.count"
+
+        given()
+            .contentType(ContentType.JSON)
+            .`when`()
+            .get("/api/stats/metrics/$metricName")
+            .then()
+            .statusCode(HttpStatus.OK.value())
+            .contentType("application/vnd.spring-boot.actuator.v3+json")
+            .body("name", equalTo(metricName))
+
+
+    }
+
+    @Test
+    fun `get a metric that does not exists and returns NOT_FOUND`() {
         val metricName = "exists"
         given()
             .contentType(ContentType.JSON)
