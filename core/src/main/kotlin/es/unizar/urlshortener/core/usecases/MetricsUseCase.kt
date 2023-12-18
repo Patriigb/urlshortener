@@ -8,9 +8,9 @@ import io.micrometer.core.instrument.*
 import org.slf4j.LoggerFactory
 
 
-// /**
-//  * Given a content returns a String that contains metrics.
-//  */
+/**
+ * Given a content returns a String that contains metrics.
+ */
 interface MetricsUseCase {
     fun registerOperatingSystemMetrics()
 
@@ -18,6 +18,9 @@ interface MetricsUseCase {
 
 }
 
+/**
+ * Implementation of [MetricsUseCase].
+ */
 class MetricsUseCaseImpl (
     private val clickRepositoryService: ClickRepositoryService,
     private val shortUrlRepositoryService: ShortUrlRepositoryService,

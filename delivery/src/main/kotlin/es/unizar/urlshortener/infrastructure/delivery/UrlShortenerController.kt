@@ -273,49 +273,6 @@ class UrlShortenerControllerImpl(
 
     }
 
-    /*
-    @GetMapping("/api/stats/metrics")
-    override fun getMetrics(request: HttpServletRequest): ResponseEntity<Any> {
-
-        // Obtén la URI actual de la solicitud
-        val currentUri = URI.create(request.requestURL.toString())
-        val uriMetrics = URI("${currentUri.scheme}://${currentUri.host}:${currentUri.port}/actuator/metrics")
-
-        val client = HttpClient.newBuilder().build()
-        val httpRequest = HttpRequest.newBuilder()
-            .uri(uriMetrics)
-            .build()
-
-        val response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString())
-        if(response.statusCode() == OK){
-            return ResponseEntity.ok().header("Content-Type", "application/json")
-                .body(response.body())
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
-
-    }
-
-
-    @GetMapping("/api/stats/metrics/{id}")
-    override fun getMetric(@PathVariable("id") id: String, request: HttpServletRequest): ResponseEntity<Any> {
-        // Obtén la URI actual de la solicitud
-        val currentUri = URI.create(request.requestURL.toString())
-        val uriMetric = URI("${currentUri.scheme}://${currentUri.host}:${currentUri.port}/actuator/metrics/${id}")
-
-        val client = HttpClient.newBuilder().build()
-        val httpRequest = HttpRequest.newBuilder()
-            .uri(uriMetric)
-            .build()
-
-        val response = client.send(httpRequest, HttpResponse.BodyHandlers.ofString())
-        if(response.statusCode() == OK){
-            return ResponseEntity.ok().header("Content-Type", "application/json")
-                .body(response.body())
-        }
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
-    }
-     */
-
     @Operation(
         summary = "Acorta una URL y genera un código QR opcionalmente",
         description = "Crea una URL corta para la URL proporcionada, con la opción de generar un código QR.",

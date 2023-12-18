@@ -78,23 +78,5 @@ class CreateQrUseCaseImpl(
             return shortUrl
         }
 
-        
-        // if (shortUrl != null && shortUrl.properties.qr == true) {
-
-        //     if(shortUrl.properties.qrImage == null){
-        //         val errorResponse = mapOf("error" to "Imagen QR no disponible. Intentalo más tarde.")
-        //         return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-        //             .header("Retry-After", "5")
-        //             .body(errorResponse)
-        //     }
-            
-        //     // Devolver imagen con tipo de contenido correcto
-        //     return shortUrl
-        //     return ResponseEntity.ok().header("Content-Type", "image/png").body(shortUrl.properties.qrImage)
-        // } else {
-        //     // Devolver 404 si el id no existe
-        //     throw RedirectionNotFound(id)
-        //     //return ResponseEntity.status(HttpStatus.NOT_FOUND).build()
-        // }
     }
 }

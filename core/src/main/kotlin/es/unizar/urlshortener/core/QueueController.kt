@@ -12,7 +12,9 @@ import kotlinx.coroutines.delay
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 
-
+/**
+ *  Concurrent Java Queues Controller
+ */
 interface QueueController {
     fun insertarComando(nombre: String, funcion: suspend () -> Unit)
 
@@ -25,6 +27,9 @@ interface QueueController {
     fun consumerMethod2()
 }
 
+/**
+ * Implementation of [QueueController].
+ */
 class QueueControllerImpl : QueueController {
     private val cola: BlockingQueue<Pair<String, suspend () -> Unit>> = LinkedBlockingQueue()
     private val log = LoggerFactory.getLogger(this::class.java)
