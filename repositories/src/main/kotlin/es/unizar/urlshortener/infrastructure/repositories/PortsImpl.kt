@@ -4,6 +4,7 @@ import es.unizar.urlshortener.core.Click
 import es.unizar.urlshortener.core.ClickRepositoryService
 import es.unizar.urlshortener.core.ShortUrl
 import es.unizar.urlshortener.core.ShortUrlRepositoryService
+
 /**
  * Implementation of the port [ClickRepositoryService].
  */

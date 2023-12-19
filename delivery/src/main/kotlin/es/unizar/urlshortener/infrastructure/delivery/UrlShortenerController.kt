@@ -20,6 +20,7 @@ import es.unizar.urlshortener.core.usecases.MetricsUseCase
 import io.swagger.v3.oas.annotations.Operation
 import io.swagger.v3.oas.annotations.media.Content
 import io.swagger.v3.oas.annotations.media.Schema
+import io.swagger.v3.oas.annotations.parameters.RequestBody
 import io.swagger.v3.oas.annotations.responses.ApiResponse
 import jakarta.servlet.http.HttpServletRequest
 import org.slf4j.LoggerFactory
@@ -68,28 +69,24 @@ interface UrlShortenerController {
 
     /**
      * Gets the summary of a short url identified by its [id].
+     * 
+     * **Note**: Delivery of use case [LogClickUseCase].
      */
     fun getSumary(id: String): ResponseEntity<Sumary>
 
     /**
      * Creates a CSV file with the short urls from a CSV file with the original urls.
+     * 
+     * **Note**: Delivery of use case [ProcessCsvUseCase].
      */
     fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String>
 
     /**
      * Gets the QR code of a short url identified by its [id].
+     * 
+     * **Note**: Delivery of use case [CreateQrUseCase].
      */
     fun getQr(id: String, request: HttpServletRequest): ResponseEntity<Any>
-    
-    /**
-     * Gets the metrics of the system.
-     */
-    // fun getMetrics(request: HttpServletRequest): ResponseEntity<Any>
-
-    /*
-    * Gets a specific metric
-    * */
-    // fun getMetric(id: String, request: HttpServletRequest): ResponseEntity<Any>
     
 }
 
@@ -168,7 +165,6 @@ class UrlShortenerControllerImpl(
 
     private val log = LoggerFactory.getLogger(this::class.java)
 
-
     @Operation(
         summary = "Obtiene la información para una URI específica",
         description = "Obtiene el resumen de información correspondiente al ID de la URI proporcionada.",
@@ -183,7 +179,6 @@ class UrlShortenerControllerImpl(
     override fun getSumary(@PathVariable("id") id: String): ResponseEntity<Sumary> {
             try{
                 val datos = logClickUseCase.getSumary(id)
-
                 val response = Sumary(info = datos)
                 return ResponseEntity<Sumary>(response, HttpStatus.OK)
             } catch (e: RedirectionNotFound) {
@@ -196,7 +191,8 @@ class UrlShortenerControllerImpl(
         summary = "Redirige a la URL especificada",
         description = "Redirige a la URL correspondiente al ID proporcionado.",
         responses = [
-            ApiResponse(responseCode = "200", description = "Redirección exitosa"),
+            ApiResponse(responseCode = "302", description = "Redirección exitosa",
+                content = [Content()]),
             ApiResponse(responseCode = "404", description = "ID no encontrado",
                 content = [Content()])
         ]
@@ -256,21 +252,30 @@ class UrlShortenerControllerImpl(
         }
     }
 
+    /**
+     * Registers the operating system metrics.
+     * 
+     * **Note**: Delivery of use case [MetricsUseCase].
+     */
     @Scheduled(fixedRate = 10000)
     fun scheduleMetricsRegistration() {
 
         queueController.producerMethod("registerOperatingSystemMetrics") {
             metricsUseCase.registerOperatingSystemMetrics()
         }
-
     }
+
+    /**
+     * Registers the short urls count metrics.
+     * 
+     * **Note**: Delivery of use case [MetricsUseCase].
+     */
     @Scheduled(fixedRate = 10000)
     fun scheduleMetricsRegistration2() {
 
         queueController.producerMethod("registerShortUrlsCount") {
             metricsUseCase.registerShortUrlsCount()
         }
-
     }
 
     @Operation(
@@ -284,7 +289,18 @@ class UrlShortenerControllerImpl(
         ]
     )
     @PostMapping("/api/link", consumes = [MediaType.APPLICATION_FORM_URLENCODED_VALUE])
-    override fun shortener(data: ShortUrlDataIn, request: HttpServletRequest): ResponseEntity<ShortUrlDataOut> =
+    override fun shortener(
+        @RequestBody(
+            description = "Datos para crear una URL corta", 
+            required = true,
+            content = [Content(
+                mediaType = MediaType.APPLICATION_FORM_URLENCODED_VALUE,
+                schema = Schema(implementation = ShortUrlDataIn::class)
+            )]
+        )
+        data: ShortUrlDataIn, 
+        request: HttpServletRequest
+    ): ResponseEntity<ShortUrlDataOut> =
         createShortUrlUseCase.create(
             url = data.url,
             data = ShortUrlProperties(
@@ -336,7 +352,18 @@ class UrlShortenerControllerImpl(
         ]
     )
     @PostMapping("/api/bulk", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
-    override fun createCsv(data: CsvDataIn, request: HttpServletRequest): ResponseEntity<String> {
+    override fun createCsv(
+        @RequestBody(
+            description = "Datos para crear múltiples URL cortas", 
+            required = true,
+            content = [Content(
+                mediaType = MediaType.MULTIPART_FORM_DATA_VALUE,
+                schema = Schema(implementation = CsvDataIn::class)
+            )]
+        )
+        data: CsvDataIn, 
+        request: HttpServletRequest
+    ): ResponseEntity<String> {
         val csvContent = data.file.bytes.toString(Charsets.UTF_8)
         val result = processCsvUseCase.checkCsvContent(csvContent)
 
@@ -395,7 +422,7 @@ class UrlShortenerControllerImpl(
     }
 
     /**
-     * Creates a short url from a [uri].
+     * Creates a short url from a [uri] for CSV funcionality.
      * @return a [ShortInfo] with the original uri, the shortened uri and an error message if any.
      */
     fun shortUrl(uri: String, data: CsvDataIn?, request: HttpServletRequest?,

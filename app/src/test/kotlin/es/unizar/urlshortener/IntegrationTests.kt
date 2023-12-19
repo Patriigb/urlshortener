@@ -132,6 +132,4 @@ class HttpRequestTest {
             ShortUrlDataOut::class.java
         )
     }
-
-
 }

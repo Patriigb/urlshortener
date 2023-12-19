@@ -82,7 +82,6 @@ class ApplicationConfiguration(
         return MeterRegistryCustomizer { registry ->
             registry.counter("operating.system.count")
             registry.counter("short.url.count")
-            //registry.gauge("short.urls.count", 0.0)
             registry.config().meterFilter(MeterFilter.denyUnless { id: Meter.Id ->
                 id.name.startsWith("jvm.threads.states")
                         || id.name == "process.cpu.usage"

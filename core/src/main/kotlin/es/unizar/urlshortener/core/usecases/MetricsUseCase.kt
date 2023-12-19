@@ -15,7 +15,6 @@ interface MetricsUseCase {
     fun registerOperatingSystemMetrics()
 
     fun registerShortUrlsCount()
-
 }
 
 /**
@@ -48,40 +47,6 @@ class MetricsUseCaseImpl (
             log.info("Valor del counter $metricSO: ${contador.count()}")
         }
     }
-
-    /*
-    override fun registerOperatingSystemMetrics() {
-        val operatingSystems = clickRepositoryService.findAllOperatingSystems()
-        val operatingSystemsDistinct = operatingSystems.distinct()
-        val total = operatingSystemsDistinct.count()
-        val metricTotal = "operating.system.count"
-
-        try {
-            registry.removeByPreFilterId(registry.get(metricTotal).meter().id)
-            for (so in operatingSystemsDistinct) {
-                val nameMetric = "operating.system.count.$so"
-                registry.removeByPreFilterId(registry.get(nameMetric).meter().id)
-            }
-        } catch (e: io.micrometer.core.instrument.search.MeterNotFoundException) {
-            // Handle MeterNotFoundException
-            log.debug("Caught MeterNotFoundException: ${e.message}")
-        }
-
-        //println("Total: $total")
-        registry.gauge(
-            metricTotal,
-            total.toDouble()
-        )
-        for (osName in operatingSystemsDistinct) {
-            val count = clickRepositoryService.countClicksByOperatingSystem(osName)
-            println("osName: $osName, count: $count")
-            registry.gauge(
-                "$metricTotal.$osName",
-                count.toDouble()
-            )
-        }
-    }
-     */
 
     override fun registerShortUrlsCount(){
         val metricUrls = "short.url.count"

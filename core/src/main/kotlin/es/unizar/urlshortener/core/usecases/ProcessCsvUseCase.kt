@@ -31,7 +31,6 @@ interface ProcessCsvUseCase {
  */
 class ProcessCsvUseCaseImpl : ProcessCsvUseCase {
     override fun checkCsvContent(csvContent: String) : CsvContent {
-        // Comprobaciones del csv
         if (csvContent.isEmpty()) {
             return CsvContent(OK)
         }

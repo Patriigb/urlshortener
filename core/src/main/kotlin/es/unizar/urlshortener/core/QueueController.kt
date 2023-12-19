@@ -16,14 +16,34 @@ import org.slf4j.LoggerFactory
  *  Concurrent Java Queues Controller
  */
 interface QueueController {
-    fun insertarComando(nombre: String, funcion: suspend () -> Unit)
 
+    /**
+     * Function to insert a command into the queue.
+     * It is used by the producer.
+     */
+    fun insertCommand(name: String, function: suspend () -> Unit)
+
+    /**
+     * Function to take a command from the queue.
+     * It is used by the consumer.
+     */
     fun takeFromQueue() : suspend () -> Unit
     
-    fun producerMethod(nombre: String, funcion: suspend () -> Unit)
+    /**
+     * Insert a command into the queue
+     * @param name Name of the command
+     * @param function Function to be executed
+     */
+    fun producerMethod(name: String, function: suspend () -> Unit)
 
+    /**
+     * Take a command from the queue and execute it
+     */
     fun consumerMethod()
 
+    /**
+     * Take a command from the queue and execute it
+     */
     fun consumerMethod2()
 }
 
@@ -34,22 +54,20 @@ class QueueControllerImpl : QueueController {
     private val cola: BlockingQueue<Pair<String, suspend () -> Unit>> = LinkedBlockingQueue()
     private val log = LoggerFactory.getLogger(this::class.java)
 
-    override fun insertarComando(nombre: String, funcion: suspend () -> Unit) {
-        // Inserta el comando en la cola bloqueante
-        log.info("Comando insertado: $nombre")
-        cola.put(nombre to funcion)
+    override fun insertCommand(name: String, function: suspend () -> Unit) {
+        log.info("Comando insertado: $name")
+        cola.put(name to function)
     }
-    
+
     override fun takeFromQueue() : suspend () -> Unit {
-        // Obtiene el comando de la cola
         val (tag, comando) = cola.take()
         log.info("Consumidor ejecutando comando: $tag")
         return comando
     }
 
     @Async
-    override fun producerMethod(nombre: String, funcion: suspend () -> Unit) {
-        insertarComando(nombre,funcion)
+    override fun producerMethod(name: String, function: suspend () -> Unit) {
+        insertCommand(name, function)
     }
 
     override fun consumerMethod() {

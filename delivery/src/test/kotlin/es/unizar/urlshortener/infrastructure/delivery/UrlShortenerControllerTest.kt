@@ -27,7 +27,6 @@ import org.springframework.test.web.servlet.result.MockMvcResultHandlers.print
 import org.springframework.test.web.servlet.result.MockMvcResultMatchers.*
 import org.springframework.util.LinkedMultiValueMap
 import java.io.StringWriter
-import org.springframework.messaging.simp.SimpMessagingTemplate
 
 @WebMvcTest
 @ContextConfiguration(

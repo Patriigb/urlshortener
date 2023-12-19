@@ -209,8 +209,6 @@ $(document).ready(
 
                     // Agregar un botón al contenedor
                     buttonContainer.append(button);
-                } else {
-                    // console.log(metricName + " no está en el array de nombres.");
                 }
             }
 
@@ -221,39 +219,36 @@ $(document).ready(
                 const metricContainer = $("#metric-info");
                 metricContainer.empty();
 
-
                 // Llamar a la función e imprimir el nombre de la métrica
                 console.log(metricName);
-                    $.ajax({
-                     type: "GET",
-                     url: '/api/stats/metrics/' + metricName,
-                     success: function (metricData) {
-                         console.log("Datos de la métrica " + metricName + ":", metricData);
+                $.ajax({
+                    type: "GET",
+                    url: '/api/stats/metrics/' + metricName,
+                    success: function (metricData) {
+                        console.log("Datos de la métrica " + metricName + ":", metricData);
 
-                         var metricNam = metricData.name;
-                         var metricDescription = metricData.description;
-                         var metricValue = metricData.measurements[0].value;
-                         var metricUnit = metricData.baseUnit
+                        var metricNam = metricData.name;
+                        var metricDescription = metricData.description;
+                        var metricValue = metricData.measurements[0].value;
+                        var metricUnit = metricData.baseUnit
 
-                         // Crear un mensaje bonito
-                         var message = `<strong>Nombre:</strong> ${metricNam}<br>`
-                         message += `<strong>Descripción:</strong> ${metricDescription}<br>`
-                         if(metricUnit !== undefined){
-                             message += `<strong>Valor:</strong> ${metricValue} ${metricUnit}`
-                         } else{
-                             message += `<strong>Valor:</strong> ${metricValue} `
+                        // Crear un mensaje bonito
+                        var message = `<strong>Nombre:</strong> ${metricNam}<br>`
+                        message += `<strong>Descripción:</strong> ${metricDescription}<br>`
+                        if(metricUnit !== undefined){
+                            message += `<strong>Valor:</strong> ${metricValue} ${metricUnit}`
+                        } else{
+                            message += `<strong>Valor:</strong> ${metricValue} `
 
-                         }
+                        }
 
-                         // Mostrar el mensaje en el HTML
-                         metricContainer.append(message)
-                         // document.getElementById('metric-info').innerHTML = message;
-
-                     },
-                     error: function (xhr, status, error) {
-                         console.log("Error en la solicitud:", status, error);
-                     }
-                 });
+                        // Mostrar el mensaje en el HTML
+                        metricContainer.append(message)
+                    },
+                    error: function (xhr, status, error) {
+                        console.log("Error en la solicitud:", status, error);
+                    }
+                });
             });
         }
 
@@ -307,7 +302,5 @@ $(document).ready(
             };
             stompClient.send("/app/csv", {}, JSON.stringify(payload));
         }
-
-
     }
 );

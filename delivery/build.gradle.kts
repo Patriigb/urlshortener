@@ -12,21 +12,25 @@ dependencies {
     implementation("commons-validator:commons-validator:${Version.COMMONS_VALIDATOR}")
     implementation("com.google.guava:guava:${Version.GUAVA}")
 
+    // Metrics
     implementation("org.springframework.boot:spring-boot-starter-actuator")
 
+    // CSV
     implementation("com.opencsv:opencsv:5.6")
+
+    // Queues
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.5.2")
 
-    implementation("org.springframework.boot:spring-boot-starter-websocket")
-
+    // Logs
     implementation("ch.qos.logback:logback-classic:1.2.6")
+
+    // OpenAPI
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.2.0")
 
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("org.springframework.boot:spring-boot-starter-jdbc")
     testImplementation("org.mockito.kotlin:mockito-kotlin:${Version.MOCKITO}")
     testImplementation("org.apache.httpcomponents.client5:httpclient5")
-
     testImplementation("org.testng:testng:7.1.0")
 }
 

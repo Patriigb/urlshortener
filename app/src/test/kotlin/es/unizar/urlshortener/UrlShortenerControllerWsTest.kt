@@ -53,20 +53,29 @@ class UrlShortenerControllerWsTest {
         stompSession.send("/app/csv", msg.toByteArray())
         latch.await()
         assertTrue(list.size >= 4)
+
+        // Welcome message
         assertTrue(list.contains(
             """{"type":"server","body":"¡Hola! Escribe una o varias urls separadas por espacios."}"""
         ))
+
+        // Short a url
         assertTrue(list.contains(
             """{"type":"server","body":"http://example.com/ >>> http://127.0.0.1/f684a3c4"}"""
         ))
+
+        // Short a url and generate a QR code
         val uri = "http://127.0.0.1/b8580acd"
         assertTrue(list.contains(
             """{"type":"server","body":"http://www.unizar.com/ >>> $uri >>> $uri/qr"}"""
         ))
+
+        // Short an invalid url
         assertTrue(list.contains(
             """{"type":"server","body":"Ha ocurrido un error: [a] does not follow a supported schema"}"""
         ))
 
+        // Wait for 5 seconds so consumers can finish
         Thread.sleep(5000)
         stompSession.disconnect()
     }

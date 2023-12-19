@@ -36,7 +36,6 @@ class UrlShortenerControllerHttpTest {
             .contentType("application/vnd.spring-boot.actuator.v3+json")
             .body("names", notNullValue()) // Verifica que 'names' no sea nulo
             .body("names", hasItems(isA(String::class.java))) // Verifica que 'names' contenga solo cadenas
-
     }
 
     @Test
@@ -51,8 +50,6 @@ class UrlShortenerControllerHttpTest {
             .statusCode(HttpStatus.OK.value())
             .contentType("application/vnd.spring-boot.actuator.v3+json")
             .body("name", equalTo(metricName))
-
-
     }
 
     @Test
@@ -67,8 +64,6 @@ class UrlShortenerControllerHttpTest {
             .statusCode(HttpStatus.OK.value())
             .contentType("application/vnd.spring-boot.actuator.v3+json")
             .body("name", equalTo(metricName))
-
-
     }
 
     @Test
@@ -83,8 +78,6 @@ class UrlShortenerControllerHttpTest {
             .statusCode(HttpStatus.OK.value())
             .contentType("application/vnd.spring-boot.actuator.v3+json")
             .body("name", equalTo(metricName))
-
-
     }
 
     @Test
@@ -99,8 +92,6 @@ class UrlShortenerControllerHttpTest {
             .statusCode(HttpStatus.OK.value())
             .contentType("application/vnd.spring-boot.actuator.v3+json")
             .body("name", equalTo(metricName))
-
-
     }
 
     @Test
@@ -113,5 +104,4 @@ class UrlShortenerControllerHttpTest {
             .then()
             .statusCode(HttpStatus.NOT_FOUND.value())
     }
-
 }
